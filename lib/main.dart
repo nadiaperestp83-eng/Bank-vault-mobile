@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vault_os/src/services/supabase_service.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:vault_os/src/routing/app_router.dart';
+import 'package:vault_os/src/constants/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class VaultOSApp extends StatelessWidget {
       title: 'Vault OS',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: AppColors.primary,
           brightness: Brightness.light,
         ),
         useMaterial3: true,
