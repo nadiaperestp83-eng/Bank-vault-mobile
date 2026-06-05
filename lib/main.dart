@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vault_os/src/services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:vault_os/src/services/supabase_service.dart';
 import 'package:vault_os/src/routing/app_router.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,8 +23,15 @@ void main() async {
   await Stripe.instance.applySettings();
 
   runApp(
-    const ProviderScope(
-      child: VaultOSApp(),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => AuthBloc(
+            supabaseClient: Supabase.instance.client,
+          )..add(AppStarted()),
+        ),
+      ],
+      child: const VaultOSApp(),
     ),
   );
 }
