@@ -53,25 +53,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleSendCode() {
-    if (_emailController.text.isEmpty) {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your email')),
       );
       return;
     }
     HapticFeedback.mediumImpact();
-    context.read<AuthBloc>().add(SendOtpRequested(_emailController.text));
+    context.read<AuthBloc>().add(SendOtpRequested(email));
   }
 
   void _handleVerify() {
-    if (_otpController.text.length < 6) {
+    final email = _emailController.text.trim();
+    final otp = _otpController.text.trim();
+    if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the 6-digit code')),
       );
       return;
     }
     HapticFeedback.mediumImpact();
-    context.read<AuthBloc>().add(VerifyOtpRequested(_emailController.text, _otpController.text));
+    context.read<AuthBloc>().add(VerifyOtpRequested(email, otp));
   }
 
   @override

@@ -30,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, VaultAuthState> {
   }
 
   Future<void> _onSendOtpRequested(SendOtpRequested event, Emitter<VaultAuthState> emit) async {
+    if (state is VaultAuthLoading) return;
     emit(VaultAuthLoading());
     try {
       await _authService.sendOtp(event.email);
@@ -40,6 +41,7 @@ class AuthBloc extends Bloc<AuthEvent, VaultAuthState> {
   }
 
   Future<void> _onVerifyOtpRequested(VerifyOtpRequested event, Emitter<VaultAuthState> emit) async {
+    if (state is VaultAuthLoading) return;
     emit(VaultAuthLoading());
     try {
       final response = await _authService.verifyOtp(event.email, event.otp);
