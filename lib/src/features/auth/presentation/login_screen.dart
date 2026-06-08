@@ -50,6 +50,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Container(
@@ -60,9 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.darkBackground,
-              AppColors.darkBackground.withOpacity(0.95),
-              AppColors.primary.withOpacity(0.05),
+              theme.scaffoldBackgroundColor,
+              theme.scaffoldBackgroundColor.withOpacity(0.95),
+              theme.colorScheme.primary.withOpacity(isDark ? 0.05 : 0.03),
             ],
           ),
         ),
@@ -94,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: _isStepTwo ? _buildStepTwo() : _buildStepOne(),
+                        child: _isStepTwo ? _buildStepTwo(context) : _buildStepOne(context),
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSizes.p32),
-                  _buildFooter().animate().fadeIn(delay: 400.ms),
+                  _buildFooter(context).animate().fadeIn(delay: 400.ms),
                 ],
               ),
             ),
@@ -109,7 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildStepOne() {
+  Widget _buildStepOne(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       key: const ValueKey('step1'),
       mainAxisSize: MainAxisSize.min,
@@ -123,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -132,22 +136,24 @@ class _LoginScreenState extends State<LoginScreen> {
           'Enter your registered email and 6-digit PIN to access your vault.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             fontSize: 14,
             height: 1.5,
           ),
         ),
         const SizedBox(height: AppSizes.p32),
         _buildTextField(
+          context: context,
           controller: _emailController,
           label: 'Email Address',
           hint: 'the account email',
           icon: LucideIcons.mail,
         ),
         const SizedBox(height: AppSizes.p20),
-        _buildPinField(),
+        _buildPinField(context),
         const SizedBox(height: AppSizes.p32),
         _buildActionButton(
+          context: context,
           text: _isLoading ? 'Sending code...' : 'Send code',
           subtitle: _isLoading ? 'Authenticating...' : null,
           onPressed: _isLoading ? null : _handleSendCode,
@@ -156,7 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildStepTwo() {
+  Widget _buildStepTwo(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       key: const ValueKey('step2'),
       mainAxisSize: MainAxisSize.min,
@@ -170,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -179,15 +186,16 @@ class _LoginScreenState extends State<LoginScreen> {
           'We\'ve sent a 6-digit code to your email. Enter it below to continue.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             fontSize: 14,
             height: 1.5,
           ),
         ),
         const SizedBox(height: AppSizes.p32),
-        _buildOtpInput(),
+        _buildOtpInput(context),
         const SizedBox(height: AppSizes.p32),
         _buildActionButton(
+          context: context,
           text: _isLoading ? 'Verifying...' : 'Verify and continue',
           onPressed: _isLoading ? null : _handleVerify,
         ),
@@ -197,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
             HapticFeedback.lightImpact();
             setState(() => _isStepTwo = false);
           },
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
           child: const Text(
             'Didn’t receive code? Go back',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -223,40 +231,51 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
-      child: Center(
+      child: const Center(
         child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 28),
       ),
     );
   }
 
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required String hint,
     required IconData icon,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         const SizedBox(height: 10),
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+            ),
           ),
           child: TextField(
             controller: controller,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
@@ -266,7 +285,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildPinField() {
+  Widget _buildPinField(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -275,7 +297,12 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Text(
               'Secure PIN',
-              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.9),
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
             GestureDetector(
               onTap: () {
@@ -283,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: Text(
                 'Forgot PIN?',
-                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(color: theme.colorScheme.primary, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -292,25 +319,27 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+            ),
           ),
           child: TextField(
             controller: _pinController,
             obscureText: !_isPinVisible,
             keyboardType: TextInputType.number,
             maxLength: 6,
-            style: const TextStyle(color: Colors.white, fontSize: 15, letterSpacing: 6),
+            style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, letterSpacing: 6),
             decoration: InputDecoration(
               counterText: '',
               hintText: '••••••',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 15, letterSpacing: 6),
-              prefixIcon: Icon(LucideIcons.lock, color: Colors.white.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.2), fontSize: 15, letterSpacing: 6),
+              prefixIcon: Icon(LucideIcons.lock, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPinVisible ? LucideIcons.eye : LucideIcons.eyeOff,
-                  color: Colors.white.withOpacity(0.3),
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
                   size: 18,
                 ),
                 onPressed: () {
@@ -327,21 +356,26 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildOtpInput() {
+  Widget _buildOtpInput(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       height: 68,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+        ),
       ),
       child: TextField(
         controller: _otpController,
         keyboardType: TextInputType.number,
         maxLength: 6,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: theme.colorScheme.onSurface,
           fontSize: 26,
           fontWeight: FontWeight.bold,
           letterSpacing: 18,
@@ -350,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withOpacity(0.05),
             letterSpacing: 18,
           ),
           border: InputBorder.none,
@@ -361,21 +395,24 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildActionButton({
+    required BuildContext context,
     required String text,
     String? subtitle,
     required VoidCallback? onPressed,
   }) {
+    final theme = Theme.of(context);
+
     return SizedBox(
       width: double.infinity,
       height: 60,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: theme.colorScheme.primary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 8,
-          shadowColor: AppColors.primary.withOpacity(0.4),
+          shadowColor: theme.colorScheme.primary.withOpacity(0.4),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -395,7 +432,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         Row(
@@ -403,16 +442,16 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Text(
               'New to Vault? ',
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
             ),
             GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
                 context.push('/signup');
               },
-              child: const Text(
+              child: Text(
                 'Create Your Account',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ],
@@ -421,23 +460,25 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(LucideIcons.shield, 'Bank-grade security'),
+            _buildBadge(context, LucideIcons.shield, 'Bank-grade security'),
             const SizedBox(width: 32),
-            _buildBadge(LucideIcons.database, 'End-to-end encryption'),
+            _buildBadge(context, LucideIcons.database, 'End-to-end encryption'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildBadge(IconData icon, String label) {
+  Widget _buildBadge(BuildContext context, IconData icon, String label) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.3), size: 16),
+        Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 16),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );

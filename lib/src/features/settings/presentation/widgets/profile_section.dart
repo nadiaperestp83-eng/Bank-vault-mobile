@@ -23,15 +23,18 @@ class _ProfileSectionState extends State<ProfileSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'PROFILE & IDENTITY',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
-                color: AppColors.textSecondaryLight,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
         ),
         const SizedBox(height: AppSizes.p16),
@@ -125,12 +128,14 @@ class _ProfileSectionState extends State<ProfileSection> {
 
               // Identity Tags (Non-editable)
               _buildReadOnlyField(
+                context: context,
                 label: 'EMAIL ADDRESS',
                 value: 'john.doe@example.com',
                 icon: LucideIcons.mail,
               ),
               const SizedBox(height: AppSizes.p16),
               _buildReadOnlyField(
+                context: context,
                 label: 'KYC TAG',
                 value: '@johndoe_vault',
                 icon: LucideIcons.atSign,
@@ -144,31 +149,33 @@ class _ProfileSectionState extends State<ProfileSection> {
                 children: [
                   Text(
                     'FULL NAME',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondaryLight,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         ),
                   ),
                   const SizedBox(height: AppSizes.p8),
                   TextField(
                     controller: _nameController,
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
                     decoration: InputDecoration(
                       hintText: 'Enter your full name',
-                      prefixIcon: const Icon(LucideIcons.user, size: 20),
+                      hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                      prefixIcon: Icon(LucideIcons.user, size: 20, color: isDark ? Colors.white60 : Colors.black54),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.p12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.p12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.p12),
                         borderSide: const BorderSide(color: AppColors.primary),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
                     ),
                   ),
                 ],
@@ -203,43 +210,47 @@ class _ProfileSectionState extends State<ProfileSection> {
   }
 
   Widget _buildReadOnlyField({
+    required BuildContext context,
     required String label,
     required String value,
     required IconData icon,
     bool isMonospace = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppColors.textSecondaryLight,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
         ),
         const SizedBox(height: AppSizes.p8),
         Container(
           padding: const EdgeInsets.all(AppSizes.p12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(AppSizes.p12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.textSecondaryLight),
+              Icon(icon, size: 18, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
               const SizedBox(width: AppSizes.p12),
               Text(
                 value,
                 style: TextStyle(
-                  color: AppColors.textPrimaryLight,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   fontFamily: isMonospace ? 'monospace' : null,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const Spacer(),
-              const Icon(LucideIcons.lock, size: 14, color: AppColors.textSecondaryLight),
+              Icon(LucideIcons.lock, size: 14, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
             ],
           ),
         ),

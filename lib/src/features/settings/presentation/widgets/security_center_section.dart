@@ -17,15 +17,18 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'SECURITY CENTER',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
-                color: AppColors.textSecondaryLight,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
         ),
         const SizedBox(height: AppSizes.p16),
@@ -69,6 +72,8 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
   }
 
   Widget _buildAlertItem(String title, String time, Color statusColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.p4),
       child: Row(
@@ -87,7 +92,7 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
           ),
           Text(
             time,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ),
         ],
       ),
@@ -125,6 +130,8 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
     bool value,
     ValueChanged<bool> onChanged,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
         Icon(icon, size: 24, color: AppColors.primary),
@@ -139,7 +146,7 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
               ),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
               ),
             ],
           ),
@@ -172,16 +179,18 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
   }
 
   Widget _buildDeviceItem(String name, String status, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.textSecondaryLight),
+        Icon(icon, size: 20, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         const SizedBox(width: AppSizes.p16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              Text(status, style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+              Text(status, style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
             ],
           ),
         ),
@@ -239,7 +248,10 @@ class _PINChangeWorkflowState extends State<_PINChangeWorkflow> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AlertDialog(
+      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.p24)),
       title: Text(_step == 1 ? 'Current PIN' : _step == 2 ? 'New PIN' : 'OTP Verification'),
       content: SizedBox(
@@ -288,6 +300,8 @@ class _PINChangeWorkflowState extends State<_PINChangeWorkflow> {
   }
 
   Widget _buildPinInput({String? label}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -299,11 +313,20 @@ class _PINChangeWorkflowState extends State<_PINChangeWorkflow> {
           obscureText: true,
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.p12),
+              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.p12),
+              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+            ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
             hintText: '••••••',
+            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
           ),
         ),
       ],

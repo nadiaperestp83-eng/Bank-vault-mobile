@@ -64,6 +64,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Container(
@@ -74,9 +77,9 @@ class _SignupScreenState extends State<SignupScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.darkBackground,
-              AppColors.darkBackground.withOpacity(0.95),
-              AppColors.primary.withOpacity(0.05),
+              theme.scaffoldBackgroundColor,
+              theme.scaffoldBackgroundColor.withOpacity(0.95),
+              theme.colorScheme.primary.withOpacity(isDark ? 0.05 : 0.03),
             ],
           ),
         ),
@@ -95,7 +98,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildStepper(),
+                          _buildStepper(context),
                           const SizedBox(height: AppSizes.p32),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 600),
@@ -113,14 +116,14 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                               );
                             },
-                            child: _buildCurrentStep(),
+                            child: _buildCurrentStep(context),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSizes.p32),
-                  _buildFooter().animate().fadeIn(delay: 400.ms),
+                  _buildFooter(context).animate().fadeIn(delay: 400.ms),
                 ],
               ),
             ),
@@ -130,7 +133,10 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildStepper() {
+  Widget _buildStepper(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Row(
       children: List.generate(3, (index) {
         bool isActive = index <= _currentStep;
@@ -139,10 +145,10 @@ class _SignupScreenState extends State<SignupScreen> {
             height: 4,
             margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : Colors.white.withOpacity(0.08),
+              color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.08),
               borderRadius: BorderRadius.circular(2),
               boxShadow: isActive ? [
-                BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4),
+                BoxShadow(color: theme.colorScheme.primary.withOpacity(0.3), blurRadius: 4),
               ] : null,
             ),
           ),
@@ -151,20 +157,22 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildCurrentStep() {
+  Widget _buildCurrentStep(BuildContext context) {
     switch (_currentStep) {
       case 0:
-        return _buildStepOne();
+        return _buildStepOne(context);
       case 1:
-        return _buildStepTwo();
+        return _buildStepTwo(context);
       case 2:
-        return _buildSuccessStep();
+        return _buildSuccessStep(context);
       default:
-        return _buildStepOne();
+        return _buildStepOne(context);
     }
   }
 
-  Widget _buildStepOne() {
+  Widget _buildStepOne(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       key: const ValueKey('step1'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,17 +182,18 @@ class _SignupScreenState extends State<SignupScreen> {
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: AppSizes.p8),
         Text(
           'Join the elite financial circle today.',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
         ),
         const SizedBox(height: AppSizes.p24),
         _buildTextField(
+          context: context,
           controller: _usernameController,
           label: 'Username',
           hint: 'your unique identity',
@@ -192,6 +201,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: AppSizes.p16),
         _buildTextField(
+          context: context,
           controller: _emailController,
           label: 'Email Address',
           hint: 'email for verification',
@@ -200,6 +210,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: AppSizes.p16),
         _buildTextField(
+          context: context,
           controller: _phoneController,
           label: 'Phone Number',
           hint: 'for notifications',
@@ -207,13 +218,14 @@ class _SignupScreenState extends State<SignupScreen> {
           keyboardType: TextInputType.phone,
         ),
         const SizedBox(height: AppSizes.p16),
-        _buildCountrySelector(),
+        _buildCountrySelector(context),
         const SizedBox(height: AppSizes.p16),
-        _buildPinSetup(),
+        _buildPinSetup(context),
         const SizedBox(height: AppSizes.p24),
-        _buildLegalAgreement(),
+        _buildLegalAgreement(context),
         const SizedBox(height: AppSizes.p32),
         _buildActionButton(
+          context: context,
           text: _isLoading ? 'Sending code...' : 'Send code',
           onPressed: _isLoading ? null : _handleSendCode,
         ),
@@ -221,7 +233,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildStepTwo() {
+  Widget _buildStepTwo(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       key: const ValueKey('step2'),
       mainAxisSize: MainAxisSize.min,
@@ -235,7 +249,7 @@ class _SignupScreenState extends State<SignupScreen> {
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -244,15 +258,16 @@ class _SignupScreenState extends State<SignupScreen> {
           'We\'ve sent a 6-digit code to ${_emailController.text}.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             fontSize: 14,
             height: 1.5,
           ),
         ),
         const SizedBox(height: AppSizes.p32),
-        _buildOtpInput(),
+        _buildOtpInput(context),
         const SizedBox(height: AppSizes.p32),
         _buildActionButton(
+          context: context,
           text: _isLoading ? 'Verifying...' : 'Verify and continue',
           onPressed: _isLoading ? null : _handleVerify,
         ),
@@ -262,7 +277,7 @@ class _SignupScreenState extends State<SignupScreen> {
             HapticFeedback.lightImpact();
             setState(() => _currentStep = 0);
           },
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
           child: const Text(
             'Didn’t receive code? Go back',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -272,7 +287,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildSuccessStep() {
+  Widget _buildSuccessStep(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       key: const ValueKey('success'),
       children: [
@@ -283,7 +300,7 @@ class _SignupScreenState extends State<SignupScreen> {
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -291,10 +308,11 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           'Welcome to Vault. Your secure financial future starts now.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withOpacity(0.6), height: 1.5),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), height: 1.5),
         ),
         const SizedBox(height: AppSizes.p40),
         _buildActionButton(
+          context: context,
           text: 'Go to Dashboard',
           onPressed: () {
             HapticFeedback.mediumImpact();
@@ -306,35 +324,46 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required String hint,
     required IconData icon,
     TextInputType? keyboardType,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         const SizedBox(height: 10),
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+            ),
           ),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
@@ -344,30 +373,40 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildCountrySelector() {
+  Widget _buildCountrySelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Country',
-          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         const SizedBox(height: 10),
         Container(
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+            ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedCountry,
               isExpanded: true,
-              dropdownColor: AppColors.darkBackground,
-              icon: Icon(LucideIcons.chevronDown, color: Colors.white.withOpacity(0.3), size: 18),
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              dropdownColor: theme.scaffoldBackgroundColor,
+              icon: Icon(LucideIcons.chevronDown, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
+              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
               items: _countries.map((String country) {
                 return DropdownMenuItem<String>(
                   value: country,
@@ -387,19 +426,27 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildPinSetup() {
+  Widget _buildPinSetup(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Secure PIN Setup',
-          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: _buildSmallPinField(
+                context: context,
                 controller: _pinPart1Controller,
                 label: '3-digit PIN',
               ),
@@ -407,6 +454,7 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildSmallPinField(
+                context: context,
                 controller: _pinPart2Controller,
                 label: 'Confirm PIN',
               ),
@@ -418,15 +466,21 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildSmallPinField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+        ),
       ),
       child: TextField(
         controller: controller,
@@ -434,11 +488,11 @@ class _SignupScreenState extends State<SignupScreen> {
         keyboardType: TextInputType.number,
         maxLength: 3,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 15, letterSpacing: 8),
+        style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, letterSpacing: 8),
         decoration: InputDecoration(
           counterText: '',
           hintText: label,
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12, letterSpacing: 1),
+          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.2), fontSize: 12, letterSpacing: 1),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
@@ -446,7 +500,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildLegalAgreement() {
+  Widget _buildLegalAgreement(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
         SizedBox(
@@ -458,8 +514,8 @@ class _SignupScreenState extends State<SignupScreen> {
               HapticFeedback.selectionClick();
               setState(() => _agreeToTerms = value ?? false);
             },
-            activeColor: AppColors.primary,
-            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            activeColor: theme.colorScheme.primary,
+            side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.2)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
@@ -467,28 +523,33 @@ class _SignupScreenState extends State<SignupScreen> {
         Expanded(
           child: Text(
             'I agree to the Terms of Service and Privacy Policy.',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOtpInput() {
+  Widget _buildOtpInput(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       height: 68,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+        ),
       ),
       child: TextField(
         controller: _otpController,
         keyboardType: TextInputType.number,
         maxLength: 6,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: theme.colorScheme.onSurface,
           fontSize: 26,
           fontWeight: FontWeight.bold,
           letterSpacing: 18,
@@ -497,7 +558,7 @@ class _SignupScreenState extends State<SignupScreen> {
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withOpacity(0.05),
             letterSpacing: 18,
           ),
           border: InputBorder.none,
@@ -508,20 +569,23 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildActionButton({
+    required BuildContext context,
     required String text,
     required VoidCallback? onPressed,
   }) {
+    final theme = Theme.of(context);
+
     return SizedBox(
       width: double.infinity,
       height: 60,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: theme.colorScheme.primary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 8,
-          shadowColor: AppColors.primary.withOpacity(0.4),
+          shadowColor: theme.colorScheme.primary.withOpacity(0.4),
         ),
         child: Text(
           text,
@@ -531,7 +595,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         Row(
@@ -539,16 +605,16 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             Text(
               'Already have an account? ',
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
             ),
             GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
                 context.push('/login');
               },
-              child: const Text(
+              child: Text(
                 'Sign In',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ],
@@ -557,23 +623,25 @@ class _SignupScreenState extends State<SignupScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(LucideIcons.shield, 'Bank-grade security'),
+            _buildBadge(context, LucideIcons.shield, 'Bank-grade security'),
             const SizedBox(width: 32),
-            _buildBadge(LucideIcons.database, 'End-to-end encryption'),
+            _buildBadge(context, LucideIcons.database, 'End-to-end encryption'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildBadge(IconData icon, String label) {
+  Widget _buildBadge(BuildContext context, IconData icon, String label) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.3), size: 16),
+        Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 16),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );
