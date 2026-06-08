@@ -9,6 +9,9 @@ import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:vault_os/src/services/supabase_service.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -39,26 +42,90 @@ class _SignupScreenState extends State<SignupScreen> {
       );
       return;
     }
+
+    if (_pinPart1Controller.text != _pinPart2Controller.text) {
+      HapticFeedback.vibrate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PINs do not match')),
+      );
+      return;
+    }
+
+    if (_pinPart1Controller.text.length < 6) {
+      HapticFeedback.vibrate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN must be 6 digits')),
+      );
+      return;
+    }
+
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        _currentStep = 1;
-      });
+
+    try {
+      final pin = _pinPart1Controller.text;
+      final hashedPassword = SupabaseService.hashPin(pin);
+
+      await SupabaseService.client.auth.signUp(
+        email: _emailController.text,
+        password: hashedPassword,
+        data: {
+          'username': _usernameController.text,
+          'phone': _phoneController.text,
+          'full_name': _usernameController.text,
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _currentStep = 1;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
     }
   }
 
   void _handleVerify() async {
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        _currentStep = 2;
-      });
+
+    try {
+      final res = await SupabaseService.client.auth.verifyOTP(
+        type: OtpType.signup,
+        token: _otpController.text,
+        email: _emailController.text,
+      );
+
+      if (res.user != null) {
+        await SupabaseService.initializeUserDatabase(
+          userId: res.user!.id,
+          username: _usernameController.text,
+          email: _emailController.text,
+          phone: _phoneController.text,
+          pin: _pinPart1Controller.text,
+        );
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _currentStep = 2;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Verification failed: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -448,7 +515,7 @@ class _SignupScreenState extends State<SignupScreen> {
               child: _buildSmallPinField(
                 context: context,
                 controller: _pinPart1Controller,
-                label: '3-digit PIN',
+                label: '6-digit PIN',
               ),
             ),
             const SizedBox(width: 16),
@@ -486,7 +553,7 @@ class _SignupScreenState extends State<SignupScreen> {
         controller: controller,
         obscureText: true,
         keyboardType: TextInputType.number,
-        maxLength: 3,
+        maxLength: 6,
         textAlign: TextAlign.center,
         style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, letterSpacing: 8),
         decoration: InputDecoration(
