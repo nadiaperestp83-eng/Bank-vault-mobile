@@ -61,9 +61,7 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: AppSizes.p24),
-                  _buildHeader(context),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 72), // Space for VaultTopNav (64px + 8px margin)
                   _buildAIInsightWidget(context).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
                   const SizedBox(height: 24),
                   _buildPortfolioSummaryCard(context).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
@@ -82,41 +80,6 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'WELCOME BACK',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            Text(
-              'John Doe',
-              style: theme.textTheme.headlineMedium,
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: theme.colorScheme.primary, width: 2),
-          ),
-          child: const CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.grey,
-            child: Icon(LucideIcons.user, size: 20, color: Colors.white),
-          ),
-        ),
-      ],
     );
   }
 

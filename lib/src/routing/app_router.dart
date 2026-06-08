@@ -9,9 +9,10 @@ import 'package:vault_os/src/features/dashboard/presentation/dashboard_screen.da
 import 'package:vault_os/src/features/finance/presentation/finance_hub_screen.dart';
 import 'package:vault_os/src/features/finance/presentation/savings_dashboard_screen.dart';
 import 'package:vault_os/src/features/finance/presentation/loans_dashboard_screen.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vault_os/src/utils/theme_provider.dart';
+import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
+import 'package:vault_os/src/features/auth/presentation/login_screen.dart';
+import 'package:vault_os/src/features/auth/presentation/signup_screen.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -47,28 +48,8 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
-    final isDark = themeMode == ThemeMode.dark;
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDark ? LucideIcons.sun : LucideIcons.moon,
-              color: isDark ? Colors.white : AppColors.lightHeading,
-            ),
-            onPressed: () {
-              ref.read(themeProvider.notifier).state =
-                  isDark ? ThemeMode.light : ThemeMode.dark;
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
       body: widget.child,
       floatingActionButton: Container(
@@ -144,8 +125,16 @@ class _MainShellState extends ConsumerState<MainShell> {
 }
 
 final router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) => const SignupScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
       routes: [
