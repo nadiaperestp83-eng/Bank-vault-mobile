@@ -7,13 +7,26 @@ abstract class VaultAuthState extends Equatable {
 
 class VaultAuthInitial extends VaultAuthState {}
 
+class VaultAuthLoading extends VaultAuthState {}
+
+class VaultOtpSent extends VaultAuthState {}
+
 class VaultAuthenticated extends VaultAuthState {
   final String userId;
-  VaultAuthenticated(this.userId);
+  final bool hasProfile;
+  final bool hasPin;
+
+  VaultAuthenticated(this.userId, {this.hasProfile = true, this.hasPin = false});
+
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [userId, hasProfile, hasPin];
 }
 
 class VaultUnauthenticated extends VaultAuthState {}
 
-class VaultAuthLoading extends VaultAuthState {}
+class VaultAuthError extends VaultAuthState {
+  final String message;
+  VaultAuthError(this.message);
+  @override
+  List<Object?> get props => [message];
+}

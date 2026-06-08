@@ -8,6 +8,8 @@ import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_state.dart';
+import 'package:vault_os/src/services/auth_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vault_os/src/utils/theme_provider.dart';
@@ -25,13 +27,15 @@ void main() async {
   Stripe.publishableKey = dotenv.env['STRIPE_KEY']!;
   await Stripe.instance.applySettings();
 
+  final authService = AuthService();
+
   runApp(
     ProviderScope(
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
             create: (context) => AuthBloc(
-              supabaseClient: Supabase.instance.client,
+              authService: authService,
             )..add(AppStarted()),
           ),
         ],

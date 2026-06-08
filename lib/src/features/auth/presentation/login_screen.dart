@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
-import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,83 +28,140 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pinController = TextEditingController();
   final _otpController = TextEditingController();
 
-  void _handleSendCode() async {
-    HapticFeedback.mediumImpact();
-    setState(() => _isLoading = true);
-    // Simulate sending code
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        _isStepTwo = true;
-      });
-    }
+  int _resendTimer = 60;
+  Timer? _timer;
+
+  void _startTimer() {
+    _resendTimer = 60;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendTimer > 0) {
+        if (mounted) setState(() => _resendTimer--);
+      } else {
+        _timer?.cancel();
+      }
+    });
   }
 
-  void _handleVerify() async {
-    HapticFeedback.mediumImpact();
-    setState(() => _isLoading = true);
-    // Simulate verification
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go('/');
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _emailController.dispose();
+    _pinController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _handleSendCode() {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email')),
+      );
+      return;
     }
+    HapticFeedback.mediumImpact();
+    context.read<AuthBloc>().add(SendOtpRequested(_emailController.text));
+  }
+
+  void _handleVerify() {
+    if (_otpController.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the 6-digit code')),
+      );
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    context.read<AuthBloc>().add(VerifyOtpRequested(_emailController.text, _otpController.text));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.darkBackground,
-              AppColors.darkBackground.withOpacity(0.95),
-              AppColors.primary.withOpacity(0.05),
-            ],
+    return BlocListener<AuthBloc, VaultAuthState>(
+      listener: (context, state) {
+        if (state is VaultAuthLoading) {
+          setState(() => _isLoading = true);
+        } else {
+          setState(() => _isLoading = false);
+        }
+
+        if (state is VaultOtpSent) {
+          setState(() => _isStepTwo = true);
+          _startTimer();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('OTP sent successfully!')),
+          );
+        }
+
+        if (state is VaultAuthenticated) {
+          if (!state.hasProfile) {
+            // context.go('/complete-profile');
+            context.go('/'); // Defaulting to dashboard for now
+          } else if (!state.hasPin) {
+            // context.go('/create-pin');
+            context.go('/'); // Defaulting to dashboard for now
+          } else {
+            context.go('/');
+          }
+        }
+
+        if (state is VaultAuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        }
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.darkBackground,
+                AppColors.darkBackground.withOpacity(0.95),
+                AppColors.primary.withOpacity(0.05),
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: GlassCard(
-                      borderRadius: 28,
-                      padding: const EdgeInsets.all(AppSizes.p24),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 600),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (Widget child, Animation<double> animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.05, 0),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _isStepTwo ? _buildStepTwo() : _buildStepOne(),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: GlassCard(
+                        borderRadius: 28,
+                        padding: const EdgeInsets.all(AppSizes.p24),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 600),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.05, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _isStepTwo ? _buildStepTwo() : _buildStepOne(),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSizes.p32),
-                  _buildFooter().animate().fadeIn(delay: 400.ms),
-                ],
+                    const SizedBox(height: AppSizes.p32),
+                    _buildFooter().animate().fadeIn(delay: 400.ms),
+                  ],
+                ),
               ),
             ),
           ),
@@ -108,7 +169,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
   Widget _buildStepOne() {
     return Column(
       key: const ValueKey('step1'),
@@ -192,14 +252,29 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: _isLoading ? null : _handleVerify,
         ),
         const SizedBox(height: AppSizes.p16),
+        if (_resendTimer > 0)
+          Text(
+            'Resend code in ${_resendTimer}s',
+            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+          )
+        else
+          TextButton(
+            onPressed: _handleSendCode,
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            child: const Text(
+              'Resend Code',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        const SizedBox(height: AppSizes.p8),
         TextButton(
           onPressed: () {
             HapticFeedback.lightImpact();
             setState(() => _isStepTwo = false);
           },
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          style: TextButton.styleFrom(foregroundColor: Colors.white.withOpacity(0.5)),
           child: const Text(
-            'Didn’t receive code? Go back',
+            'Go back',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
