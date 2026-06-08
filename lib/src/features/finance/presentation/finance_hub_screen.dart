@@ -38,38 +38,34 @@ class FinanceHubScreen extends StatelessWidget {
               ).animate().fadeIn(delay: 100.ms),
               const SizedBox(height: 40),
               
-              Row(
+              Column(
                 children: [
-                  Expanded(
-                    child: _HubCard(
-                      title: 'Savings',
-                      description: 'Put your money to work.',
-                      icon: LucideIcons.piggyBank,
-                      color: AppColors.primary,
-                      benefits: const [
-                        {'icon': LucideIcons.target, 'label': 'Goals'},
-                        {'icon': LucideIcons.lock, 'label': 'Locked'},
-                        {'icon': LucideIcons.shield, 'label': 'Secure'},
-                        {'icon': LucideIcons.trendingUp, 'label': '8% APY'},
-                      ],
-                      onTap: () => context.push('/finance/savings'),
-                    ),
+                  _HubCard(
+                    title: 'Savings',
+                    description: 'Put your money to work.',
+                    icon: LucideIcons.piggyBank,
+                    color: AppColors.primary,
+                    benefits: const [
+                      {'icon': LucideIcons.target, 'label': 'Goals'},
+                      {'icon': LucideIcons.lock, 'label': 'Locked'},
+                      {'icon': LucideIcons.shield, 'label': 'Secure'},
+                      {'icon': LucideIcons.trendingUp, 'label': '8% APY'},
+                    ],
+                    onTap: () => context.push('/finance/savings'),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _HubCard(
-                      title: 'Loans',
-                      description: 'Credit when you need it.',
-                      icon: LucideIcons.landmark,
-                      color: const Color(0xFF334155), // Slate 700
-                      benefits: const [
-                        {'icon': LucideIcons.zap, 'label': 'Instant'},
-                        {'icon': LucideIcons.calendar, 'label': 'Flexible'},
-                        {'icon': LucideIcons.percent, 'label': 'Low Int.'},
-                        {'icon': LucideIcons.checkCircle, 'label': 'Easy'},
-                      ],
-                      onTap: () => context.push('/finance/loans'),
-                    ),
+                  const SizedBox(height: 24),
+                  _HubCard(
+                    title: 'Loans',
+                    description: 'Credit when you need it.',
+                    icon: LucideIcons.landmark,
+                    color: const Color(0xFF334155), // Slate 700
+                    benefits: const [
+                      {'icon': LucideIcons.zap, 'label': 'Instant'},
+                      {'icon': LucideIcons.calendar, 'label': 'Flexible'},
+                      {'icon': LucideIcons.percent, 'label': 'Low Int.'},
+                      {'icon': LucideIcons.checkCircle, 'label': 'Easy'},
+                    ],
+                    onTap: () => context.push('/finance/loans'),
                   ),
                 ],
               ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),

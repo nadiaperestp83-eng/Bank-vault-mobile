@@ -10,15 +10,18 @@ import 'package:vault_os/src/features/finance/presentation/finance_hub_screen.da
 import 'package:vault_os/src/features/finance/presentation/savings_dashboard_screen.dart';
 import 'package:vault_os/src/features/finance/presentation/loans_dashboard_screen.dart';
 
-class MainShell extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vault_os/src/utils/theme_provider.dart';
+
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _currentIndex = 0;
 
   void _onTap(BuildContext context, int index) {
@@ -44,7 +47,29 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? LucideIcons.sun : LucideIcons.moon,
+              color: isDark ? Colors.white : AppColors.lightHeading,
+            ),
+            onPressed: () {
+              ref.read(themeProvider.notifier).state =
+                  isDark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      extendBodyBehindAppBar: true,
       body: widget.child,
       floatingActionButton: Container(
         height: 64,

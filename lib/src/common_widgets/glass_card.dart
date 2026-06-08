@@ -1,5 +1,5 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 
@@ -8,6 +8,7 @@ class GlassCard extends StatelessWidget {
   final double? width;
   final double? height;
   final EdgeInsetsGeometry? padding;
+  final double? borderRadius;
 
   const GlassCard({
     super.key,
@@ -15,30 +16,51 @@ class GlassCard extends StatelessWidget {
     this.width,
     this.height,
     this.padding,
+    this.borderRadius,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      padding: padding ?? const EdgeInsets.all(AppSizes.p16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(AppSizes.p20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final blur = isDark ? 20.0 : 15.0;
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius ?? 32),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: Container(
+          width: width,
+          height: height,
+          padding: padding ?? const EdgeInsets.all(AppSizes.p20),
+          decoration: BoxDecoration(
+            color: isDark 
+                ? AppColors.darkSurface 
+                : AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(borderRadius ?? 32),
+            border: Border.all(
+              color: isDark 
+                  ? Colors.white.withOpacity(0.08) 
+                  : AppColors.lightBorder,
+              width: isDark ? 1.0 : 0.5,
+            ),
+            boxShadow: isDark ? [
+              BoxShadow(
+                color: AppColors.darkPrimary.withOpacity(0.03),
+                blurRadius: 20,
+                spreadRadius: 2,
+              )
+            ] : [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 15,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
-        ],
+          child: child,
+        ),
       ),
-      child: child,
     );
   }
 }

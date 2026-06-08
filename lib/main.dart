@@ -9,6 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vault_os/src/utils/theme_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -23,34 +26,35 @@ void main() async {
   await Stripe.instance.applySettings();
 
   runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => AuthBloc(
-            supabaseClient: Supabase.instance.client,
-          )..add(AppStarted()),
-        ),
-      ],
-      child: const VaultOSApp(),
+    ProviderScope(
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(
+              supabaseClient: Supabase.instance.client,
+            )..add(AppStarted()),
+          ),
+        ],
+        child: const VaultOSApp(),
+      ),
     ),
   );
 }
 
-class VaultOSApp extends StatelessWidget {
+class VaultOSApp extends ConsumerWidget {
   const VaultOSApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+
     return MaterialApp.router(
       title: 'Vault OS',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
