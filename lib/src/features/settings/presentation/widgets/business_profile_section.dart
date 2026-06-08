@@ -26,6 +26,9 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,10 +37,10 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
           children: [
             Text(
               'BUSINESS PROFILE',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
-                    color: AppColors.textSecondaryLight,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   ),
             ),
             Switch.adaptive(
@@ -56,20 +59,21 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
   }
 
   Widget _buildInactiveState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GlassCard(
       child: Column(
         children: [
-          const Icon(LucideIcons.store, size: 48, color: AppColors.textSecondaryLight),
+          Icon(LucideIcons.store, size: 48, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           const SizedBox(height: AppSizes.p16),
           const Text(
             'Enable Merchant Mode',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: AppSizes.p8),
-          const Text(
+          Text(
             'Accept P2P payments, generate business QRs, and access merchant analytics.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondaryLight),
+            style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ),
           const SizedBox(height: AppSizes.p24),
           ElevatedButton(
@@ -90,6 +94,9 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
   }
 
   Widget _buildActiveForm() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         GlassCard(
@@ -105,21 +112,28 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               const SizedBox(height: AppSizes.p16),
               Text(
                 'CATEGORY',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondaryLight,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     ),
               ),
               const SizedBox(height: AppSizes.p8),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
+                dropdownColor: isDark ? AppColors.darkBackground : Colors.white,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(LucideIcons.layoutGrid, size: 20),
+                  prefixIcon: Icon(LucideIcons.layoutGrid, size: 20, color: isDark ? Colors.white60 : Colors.black54),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppSizes.p12),
+                    borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.p12),
+                    borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
                 ),
                 items: ['Retail', 'Services', 'Food & Drink', 'Tech', 'Other']
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -147,6 +161,8 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
   }
 
   Widget _buildQREngine() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GlassCard(
       child: Column(
         children: [
@@ -172,7 +188,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               alignment: Alignment.center,
               children: [
                 // Placeholder for QR Code
-                const Icon(LucideIcons.qrCode, size: 180, color: AppColors.textPrimaryLight),
+                const Icon(LucideIcons.qrCode, size: 180, color: AppColors.lightHeading),
                 Container(
                   padding: const EdgeInsets.all(AppSizes.p4),
                   decoration: const BoxDecoration(
@@ -251,12 +267,14 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
   }
 
   Widget _buildStep(int num, String title, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.p8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(AppSizes.p12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -280,14 +298,17 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
     int maxLines = 1,
     int? maxLength,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppColors.textSecondaryLight,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
         ),
         const SizedBox(height: AppSizes.p8),
@@ -295,14 +316,21 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
           controller: controller,
           maxLines: maxLines,
           maxLength: maxLength,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20),
+            hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+            prefixIcon: Icon(icon, size: 20, color: isDark ? Colors.white60 : Colors.black54),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.p12),
+              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.p12),
+              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
             counterText: '',
           ),
         ),

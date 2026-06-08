@@ -22,15 +22,18 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'ACTIVITY & PREFERENCES',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
-                color: AppColors.textSecondaryLight,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
         ),
         const SizedBox(height: AppSizes.p16),
@@ -70,11 +73,13 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
   }
 
   Widget _buildLogItem(String action, String timestamp) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.p8),
       child: Row(
         children: [
-          const Icon(LucideIcons.history, size: 14, color: AppColors.textSecondaryLight),
+          Icon(LucideIcons.history, size: 14, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           const SizedBox(width: AppSizes.p12),
           Expanded(
             child: Text(
@@ -84,7 +89,7 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
           ),
           Text(
             timestamp,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ),
         ],
       ),
@@ -141,23 +146,27 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
   }
 
   Widget _buildDropdown(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
+        Text(label, style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
         const SizedBox(height: AppSizes.p4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(AppSizes.p12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+              dropdownColor: isDark ? AppColors.darkBackground : Colors.white,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
+              items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: onChanged,
             ),
           ),
@@ -176,8 +185,11 @@ class ActivityLogDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.85,
+      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,14 +200,18 @@ class ActivityLogDrawer extends StatelessWidget {
                 children: [
                   const Icon(LucideIcons.history, color: AppColors.primary),
                   const SizedBox(width: AppSizes.p16),
-                  const Text(
+                  Text(
                     'Full Activity Log',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(LucideIcons.x),
+                    icon: Icon(LucideIcons.x, color: isDark ? Colors.white : Colors.black),
                   ),
                 ],
               ),
@@ -204,13 +220,30 @@ class ActivityLogDrawer extends StatelessWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24),
                 itemCount: 20,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
                 itemBuilder: (context, index) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Action $index', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: Text('June ${8 - (index ~/ 3)}, 2026', style: const TextStyle(fontSize: 12)),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 16),
+                    title: Text(
+                      'Action $index', 
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'June ${8 - (index ~/ 3)}, 2026', 
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    trailing: Icon(
+                      LucideIcons.chevronRight, 
+                      size: 16,
+                      color: isDark ? Colors.white24 : Colors.black26,
+                    ),
                   );
                 },
               ),

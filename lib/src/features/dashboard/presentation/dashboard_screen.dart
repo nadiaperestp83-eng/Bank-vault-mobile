@@ -123,16 +123,17 @@ class DashboardScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSizes.p32),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
-              ? [AppColors.darkPrimary, AppColors.darkPrimary.withOpacity(0.7)]
-              : [AppColors.lightPrimary, AppColors.lightPrimary.withOpacity(0.8)],
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withOpacity(isDark ? 0.7 : 0.8),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.darkPrimary : AppColors.lightPrimary).withOpacity(0.2),
+            color: theme.colorScheme.primary.withOpacity(0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -222,9 +223,7 @@ class DashboardScreen extends StatelessWidget {
                   onPressed: () {},
                   style: theme.elevatedButtonTheme.style?.copyWith(
                     backgroundColor: WidgetStateProperty.all(
-                      theme.brightness == Brightness.dark 
-                          ? Colors.white.withOpacity(0.05) 
-                          : Colors.black.withOpacity(0.05)
+                      theme.colorScheme.onSurface.withOpacity(0.05),
                     ),
                     foregroundColor: WidgetStateProperty.all(theme.textTheme.bodyLarge?.color),
                   ),

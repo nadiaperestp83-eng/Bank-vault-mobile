@@ -20,8 +20,8 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider);
-    final isDark = themeMode == ThemeMode.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final authState = context.watch<AuthBloc>().state;
 
     return ClipRRect(
@@ -31,14 +31,12 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           height: 64,
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
           decoration: BoxDecoration(
-            color: isDark 
-                ? AppColors.darkBackground.withOpacity(0.7) 
-                : Colors.white.withOpacity(0.7),
+            color: theme.scaffoldBackgroundColor.withOpacity(0.7),
             border: Border(
               bottom: BorderSide(
                 color: isDark 
                     ? Colors.white.withOpacity(0.08) 
-                    : AppColors.lightBorder.withOpacity(0.5),
+                    : theme.dividerTheme.color?.withOpacity(0.5) ?? theme.colorScheme.outline.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -55,7 +53,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 // Right Section: Interaction Hub (Always visible)
                 _buildGreeting(context),
                 const SizedBox(width: AppSizes.p12),
-                _buildInteractionHub(context, ref, isDark),
+                _buildInteractionHub(context, ref),
               ],
             ),
           ),
@@ -65,6 +63,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildLogo(BuildContext context, VaultAuthState authState) {
+    final theme = Theme.of(context);
     final currentPath = GoRouterState.of(context).uri.path;
     final isLanding = currentPath == '/login' || currentPath == '/signup';
 
@@ -81,11 +80,11 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: theme.colorScheme.primary,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
+              color: theme.colorScheme.primary.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -135,14 +134,15 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
               '$greeting, $emoji',
               style: theme.textTheme.labelSmall?.copyWith(
                 fontSize: 10,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
-            const Text(
+            Text(
               'Stephen',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ],
@@ -151,10 +151,14 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _buildInteractionHub(BuildContext context, WidgetRef ref, bool isDark) {
+  Widget _buildInteractionHub(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Row(
       children: [
         _buildNavButton(
+          context: context,
           icon: isDark ? LucideIcons.sun : LucideIcons.moon,
           color: isDark ? Colors.yellow : const Color(0xFF64748B),
           onTap: () {
@@ -167,6 +171,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         ),
         const SizedBox(width: 10),
         _buildNavButton(
+          context: context,
           icon: LucideIcons.receiptText,
           onTap: () {
             HapticFeedback.lightImpact();
@@ -182,12 +187,19 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildNavButton({
+    required BuildContext context,
     required IconData icon,
     required VoidCallback onTap,
     Color? color,
     bool isCircular = false,
     bool hasGlow = false,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final defaultIconColor = theme.colorScheme.onSurface;
+    final backgroundColor = theme.colorScheme.onSurface.withOpacity(0.05);
+    final borderColor = theme.colorScheme.onSurface.withOpacity(0.1);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(isCircular ? 20 : 10),
@@ -195,19 +207,19 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: backgroundColor,
           shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
           borderRadius: isCircular ? null : BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: borderColor),
           boxShadow: hasGlow ? [
             BoxShadow(
-              color: (color ?? AppColors.primary).withOpacity(0.15),
+              color: (color ?? theme.colorScheme.primary).withOpacity(isDark ? 0.15 : 0.1),
               blurRadius: 8,
               spreadRadius: 1,
             )
           ] : [],
         ),
-        child: Icon(icon, size: 18, color: color ?? Colors.white),
+        child: Icon(icon, size: 18, color: color ?? defaultIconColor),
       ),
     );
   }
@@ -217,6 +229,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
       clipBehavior: Clip.none,
       children: [
         _buildNavButton(
+          context: context,
           icon: LucideIcons.bell,
           onTap: () {
             HapticFeedback.lightImpact();
@@ -227,8 +240,8 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           right: -2,
           child: Container(
             padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-              color: AppColors.error,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error,
               shape: BoxShape.circle,
             ),
             constraints: const BoxConstraints(
@@ -254,6 +267,9 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildProfileTrigger(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -264,9 +280,9 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         height: 36,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.darkPrimary, width: 2),
+          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5), width: 2),
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+            colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

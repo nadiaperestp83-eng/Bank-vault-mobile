@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
@@ -110,9 +111,12 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return PopScope(
       canPop: _step != 3,
       child: AlertDialog(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.p24)),
         contentPadding: const EdgeInsets.all(AppSizes.p24),
         content: Column(
@@ -128,6 +132,8 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
   }
 
   Widget _buildAssetCheck() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         const Icon(LucideIcons.search, size: 48, color: AppColors.primary),
@@ -137,10 +143,10 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: AppSizes.p8),
-        const Text(
+        Text(
           'Scanning your account for active balances, loans, and goals...',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondaryLight),
+          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         ),
         const SizedBox(height: AppSizes.p24),
         if (_isScanning)
@@ -212,6 +218,8 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
   }
 
   Widget _buildConfirmation() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         const Icon(LucideIcons.shieldAlert, size: 48, color: AppColors.error),
@@ -221,23 +229,27 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: AppSizes.p8),
-        const Text(
+        Text(
           'This action is IRREVERSIBLE. Please enter your credentials to confirm.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondaryLight),
+          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         ),
         const SizedBox(height: AppSizes.p24),
         TextField(
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
           decoration: InputDecoration(
             hintText: 'Email Address',
+            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
           ),
         ),
         const SizedBox(height: AppSizes.p12),
         TextField(
           obscureText: true,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
           decoration: InputDecoration(
             hintText: 'Password',
+            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
           ),
         ),
@@ -263,6 +275,8 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
   }
 
   Widget _buildSuccess() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         const Icon(LucideIcons.mailCheck, size: 64, color: AppColors.primary),
@@ -272,10 +286,10 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: AppSizes.p12),
-        const Text(
+        Text(
           'We have sent a final confirmation link to your email. Your account will be scheduled for deletion once you click it.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondaryLight),
+          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         ),
         const SizedBox(height: AppSizes.p32),
         SizedBox(
@@ -283,7 +297,7 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           child: ElevatedButton(
             onPressed: () {
               Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to login or home (mocked)
+              context.go('/login');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
