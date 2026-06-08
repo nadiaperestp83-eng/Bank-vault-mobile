@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:vault_os/src/services/supabase_service.dart';
 import 'package:vault_os/src/routing/app_router.dart';
-import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
-import 'package:vault_os/src/features/auth/presentation/bloc/auth_state.dart';
 import 'package:vault_os/src/services/auth_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
