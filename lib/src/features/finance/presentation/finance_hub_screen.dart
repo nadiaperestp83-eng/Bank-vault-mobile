@@ -18,7 +18,7 @@ class FinanceHubScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: AppSizes.p16),
+              const SizedBox(height: 64), // Space for VaultTopNav
               const Text(
                 'Finance Hub',
                 style: TextStyle(

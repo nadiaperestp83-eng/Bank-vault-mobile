@@ -15,30 +15,28 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
-        title: Text(
-          'Settings',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                // Using a slightly more sophisticated look if possible
-              ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(LucideIcons.bell, color: AppColors.textPrimaryLight),
-          ),
-          const SizedBox(width: AppSizes.p8),
-        ],
-      ),
       endDrawer: const ActivityLogDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20, vertical: AppSizes.p16),
         child: Column(
           children: [
+            const SizedBox(height: 64), // Space for VaultTopNav
+            Row(
+              children: [
+                Text(
+                  'Settings',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(LucideIcons.bell, color: AppColors.textPrimaryLight),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.p24),
             const ProfileSection(),
             const SizedBox(height: AppSizes.p32),
             const BusinessProfileSection(),

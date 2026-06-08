@@ -44,6 +44,7 @@ class _HelpScreenState extends State<HelpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 64), // Space for VaultTopNav
               _buildHeader(context),
               const SizedBox(height: AppSizes.p32),
               _buildSearchBar(context),

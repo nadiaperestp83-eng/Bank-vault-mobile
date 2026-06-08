@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -32,11 +33,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void _handleSendCode() async {
     if (!_agreeToTerms) {
+      HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please agree to the Terms of Service')),
       );
       return;
     }
+    HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
@@ -48,6 +51,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _handleVerify() async {
+    HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
@@ -61,7 +65,6 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
       body: Container(
         width: double.infinity,
@@ -72,8 +75,8 @@ class _SignupScreenState extends State<SignupScreen> {
             end: Alignment.bottomRight,
             colors: [
               AppColors.darkBackground,
-              AppColors.darkBackground.withOpacity(0.8),
-              AppColors.primary.withOpacity(0.1),
+              AppColors.darkBackground.withOpacity(0.95),
+              AppColors.primary.withOpacity(0.05),
             ],
           ),
         ),
@@ -87,15 +90,29 @@ class _SignupScreenState extends State<SignupScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 450),
                     child: GlassCard(
-                      borderRadius: 24,
+                      borderRadius: 28,
                       padding: const EdgeInsets.all(AppSizes.p24),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildStepper(),
-                          const SizedBox(height: AppSizes.p24),
+                          const SizedBox(height: AppSizes.p32),
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 500),
+                            duration: const Duration(milliseconds: 600),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0.05, 0),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
                             child: _buildCurrentStep(),
                           ),
                         ],
@@ -103,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSizes.p32),
-                  _buildFooter(),
+                  _buildFooter().animate().fadeIn(delay: 400.ms),
                 ],
               ),
             ),
@@ -122,8 +139,11 @@ class _SignupScreenState extends State<SignupScreen> {
             height: 4,
             margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : Colors.white.withOpacity(0.1),
+              color: isActive ? AppColors.primary : Colors.white.withOpacity(0.08),
               borderRadius: BorderRadius.circular(2),
+              boxShadow: isActive ? [
+                BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4),
+              ] : null,
             ),
           ),
         );
@@ -152,10 +172,16 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           'Create Your Vault Account',
           style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: -0.5,
           ),
+        ),
+        const SizedBox(height: AppSizes.p8),
+        Text(
+          'Join the elite financial circle today.',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
         ),
         const SizedBox(height: AppSizes.p24),
         _buildTextField(
@@ -186,7 +212,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _buildPinSetup(),
         const SizedBox(height: AppSizes.p24),
         _buildLegalAgreement(),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildActionButton(
           text: _isLoading ? 'Sending code...' : 'Send code',
           onPressed: _isLoading ? null : _handleSendCode,
@@ -201,39 +227,45 @@ class _SignupScreenState extends State<SignupScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(LucideIcons.mailCheck, color: AppColors.primary, size: 48),
-        const SizedBox(height: AppSizes.p16),
+        const Icon(LucideIcons.mailCheck, color: AppColors.primary, size: 52),
+        const SizedBox(height: AppSizes.p20),
         Text(
           'Verify Your Email',
           textAlign: TextAlign.center,
           style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p8),
+        const SizedBox(height: AppSizes.p12),
         Text(
           'We\'ve sent a 6-digit code to ${_emailController.text}.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withOpacity(0.5),
             fontSize: 14,
+            height: 1.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildOtpInput(),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildActionButton(
           text: _isLoading ? 'Verifying...' : 'Verify and continue',
           onPressed: _isLoading ? null : _handleVerify,
         ),
         const SizedBox(height: AppSizes.p16),
         TextButton(
-          onPressed: () => setState(() => _currentStep = 0),
-          child: Text(
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            setState(() => _currentStep = 0);
+          },
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          child: const Text(
             'Didn’t receive code? Go back',
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -244,26 +276,30 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       key: const ValueKey('success'),
       children: [
-        const Icon(LucideIcons.partyPopper, color: AppColors.primary, size: 64),
+        const Icon(LucideIcons.partyPopper, color: AppColors.primary, size: 68),
         const SizedBox(height: AppSizes.p24),
         Text(
           'Account Created!',
           style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: AppSizes.p16),
         Text(
           'Welcome to Vault. Your secure financial future starts now.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withOpacity(0.6)),
+          style: TextStyle(color: Colors.white.withOpacity(0.6), height: 1.5),
         ),
-        const SizedBox(height: AppSizes.p32),
+        const SizedBox(height: AppSizes.p40),
         _buildActionButton(
           text: 'Go to Dashboard',
-          onPressed: () => context.go('/'),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            context.go('/');
+          },
         ),
       ],
     );
@@ -281,26 +317,26 @@ class _SignupScreenState extends State<SignupScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
-          height: 48,
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
           ),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.4), size: 18),
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.3), size: 18),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -312,26 +348,26 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Country',
-          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
-          height: 48,
+          height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedCountry,
               isExpanded: true,
               dropdownColor: AppColors.darkBackground,
-              icon: Icon(LucideIcons.chevronDown, color: Colors.white.withOpacity(0.4), size: 18),
-              style: const TextStyle(color: Colors.white),
+              icon: Icon(LucideIcons.chevronDown, color: Colors.white.withOpacity(0.3), size: 18),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
               items: _countries.map((String country) {
                 return DropdownMenuItem<String>(
                   value: country,
@@ -340,6 +376,7 @@ class _SignupScreenState extends State<SignupScreen> {
               }).toList(),
               onChanged: (String? newValue) {
                 if (newValue != null) {
+                  HapticFeedback.selectionClick();
                   setState(() => _selectedCountry = newValue);
                 }
               },
@@ -354,17 +391,17 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Secure PIN Setup',
-          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: _buildSmallPinField(
                 controller: _pinPart1Controller,
-                label: 'PIN',
+                label: '3-digit PIN',
               ),
             ),
             const SizedBox(width: 16),
@@ -385,11 +422,11 @@ class _SignupScreenState extends State<SignupScreen> {
     required String label,
   }) {
     return Container(
-      height: 48,
+      height: 52,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: TextField(
         controller: controller,
@@ -397,13 +434,13 @@ class _SignupScreenState extends State<SignupScreen> {
         keyboardType: TextInputType.number,
         maxLength: 3,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, letterSpacing: 8),
+        style: const TextStyle(color: Colors.white, fontSize: 15, letterSpacing: 8),
         decoration: InputDecoration(
           counterText: '',
           hintText: label,
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12, letterSpacing: 1),
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12, letterSpacing: 1),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
@@ -417,16 +454,20 @@ class _SignupScreenState extends State<SignupScreen> {
           width: 24,
           child: Checkbox(
             value: _agreeToTerms,
-            onChanged: (value) => setState(() => _agreeToTerms = value ?? false),
+            onChanged: (value) {
+              HapticFeedback.selectionClick();
+              setState(() => _agreeToTerms = value ?? false);
+            },
             activeColor: AppColors.primary,
-            side: BorderSide(color: Colors.white.withOpacity(0.4)),
+            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             'I agree to the Terms of Service and Privacy Policy.',
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
           ),
         ),
       ],
@@ -435,11 +476,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Widget _buildOtpInput() {
     return Container(
-      height: 64,
+      height: 68,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: TextField(
         controller: _otpController,
@@ -448,19 +489,19 @@ class _SignupScreenState extends State<SignupScreen> {
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 24,
+          fontSize: 26,
           fontWeight: FontWeight.bold,
-          letterSpacing: 16,
+          letterSpacing: 18,
         ),
         decoration: InputDecoration(
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.1),
-            letterSpacing: 16,
+            color: Colors.white.withOpacity(0.05),
+            letterSpacing: 18,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
@@ -472,18 +513,19 @@ class _SignupScreenState extends State<SignupScreen> {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 60,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          shadowColor: AppColors.primary.withOpacity(0.4),
         ),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ),
     );
@@ -497,26 +539,27 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             Text(
               'Already have an account? ',
-              style: TextStyle(color: Colors.white.withOpacity(0.6)),
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
             ),
             GestureDetector(
-              onTap: () => context.push('/login'),
-              child: Text(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.push('/login');
+              },
+              child: const Text(
                 'Sign In',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSizes.p32),
+        const SizedBox(height: 48),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(LucideIcons.shield, 'Bank-grade'),
-            const SizedBox(width: 24),
-            _buildBadge(LucideIcons.database, 'Encrypted'),
-            const SizedBox(width: 24),
-            _buildBadge(LucideIcons.layers, 'Secure'),
+            _buildBadge(LucideIcons.shield, 'Bank-grade security'),
+            const SizedBox(width: 32),
+            _buildBadge(LucideIcons.database, 'End-to-end encryption'),
           ],
         ),
       ],
@@ -524,13 +567,13 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildBadge(IconData icon, String label) {
-    return Column(
+    return Row(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.4), size: 20),
-        const SizedBox(height: 4),
+        Icon(icon, color: Colors.white.withOpacity(0.3), size: 16),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );

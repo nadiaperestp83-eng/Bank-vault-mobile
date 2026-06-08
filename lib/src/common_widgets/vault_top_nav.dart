@@ -52,14 +52,10 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 
                 const Spacer(),
                 
-                // Right Section: Interaction Hub
-                if (authState is VaultAuthenticated) ...[
-                  _buildGreeting(context),
-                  const SizedBox(width: AppSizes.p12),
-                  _buildInteractionHub(context, ref, isDark),
-                ] else ...[
-                  _buildLandingButtons(context),
-                ],
+                // Right Section: Interaction Hub (Always visible)
+                _buildGreeting(context),
+                const SizedBox(width: AppSizes.p12),
+                _buildInteractionHub(context, ref, isDark),
               ],
             ),
           ),
@@ -69,13 +65,16 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildLogo(BuildContext context, VaultAuthState authState) {
+    final currentPath = GoRouterState.of(context).uri.path;
+    final isLanding = currentPath == '/login' || currentPath == '/signup';
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        if (authState is VaultAuthenticated) {
-          context.go('/');
+        if (isLanding) {
+          context.go('/login');
         } else {
-          context.go('/login'); // Link to login/root
+          context.go('/');
         }
       },
       child: Container(
@@ -140,7 +139,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
               ),
             ),
             const Text(
-              'Stephen', // Placeholder name
+              'Stephen',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -171,6 +170,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           icon: LucideIcons.receiptText,
           onTap: () {
             HapticFeedback.lightImpact();
+            // Show digital receipts logic
           },
         ),
         const SizedBox(width: 10),
@@ -207,7 +207,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
             )
           ] : [],
         ),
-        child: Icon(icon, size: 18, color: color ?? Colors.white, strokeWidth: 1.5),
+        child: Icon(icon, size: 18, color: color ?? Colors.white),
       ),
     );
   }
@@ -351,7 +351,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
     Color? color,
   }) {
     return ListTile(
-      leading: Icon(icon, color: color, size: 20, strokeWidth: 1.5),
+      leading: Icon(icon, color: color, size: 20),
       title: Text(
         title,
         style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
@@ -360,40 +360,6 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         HapticFeedback.lightImpact();
         onTap();
       },
-    );
-  }
-
-  Widget _buildLandingButtons(BuildContext context) {
-    return Row(
-      children: [
-        OutlinedButton(
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            context.go('/login');
-          },
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.white.withOpacity(0.2)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-          ),
-          child: const Text('Sign In', style: TextStyle(color: Colors.white, fontSize: 12)),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton(
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            context.go('/signup');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            elevation: 0,
-          ),
-          child: const Text('Get Started', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        ),
-      ],
     );
   }
 }

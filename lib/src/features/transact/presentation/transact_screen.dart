@@ -25,7 +25,7 @@ class _TransactScreenState extends State<TransactScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSizes.p20),
+              const SizedBox(height: 64), // Space for VaultTopNav
               _buildModeToggle(),
               const SizedBox(height: 32),
               _buildActiveSection(),

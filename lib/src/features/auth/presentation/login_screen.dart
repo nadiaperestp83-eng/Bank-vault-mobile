@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -24,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otpController = TextEditingController();
 
   void _handleSendCode() async {
+    HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
     // Simulate sending code
     await Future.delayed(const Duration(seconds: 2));
@@ -36,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleVerify() async {
+    HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
     // Simulate verification
     await Future.delayed(const Duration(seconds: 2));
@@ -48,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
       body: Container(
         width: double.infinity,
@@ -59,8 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
             end: Alignment.bottomRight,
             colors: [
               AppColors.darkBackground,
-              AppColors.darkBackground.withOpacity(0.8),
-              AppColors.primary.withOpacity(0.1),
+              AppColors.darkBackground.withOpacity(0.95),
+              AppColors.primary.withOpacity(0.05),
             ],
           ),
         ),
@@ -74,16 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 400),
                     child: GlassCard(
-                      borderRadius: 24,
+                      borderRadius: 28,
                       padding: const EdgeInsets.all(AppSizes.p24),
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
+                        duration: const Duration(milliseconds: 600),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
                         transitionBuilder: (Widget child, Animation<double> animation) {
                           return FadeTransition(
                             opacity: animation,
                             child: SlideTransition(
                               position: Tween<Offset>(
-                                begin: const Offset(0.1, 0),
+                                begin: const Offset(0.05, 0),
                                 end: Offset.zero,
                               ).animate(animation),
                               child: child,
@@ -95,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSizes.p32),
-                  _buildFooter(),
+                  _buildFooter().animate().fadeIn(delay: 400.ms),
                 ],
               ),
             ),
@@ -112,35 +116,37 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildVaultLogo(),
-        const SizedBox(height: AppSizes.p16),
+        const SizedBox(height: AppSizes.p20),
         Text(
           'Log In to Your Vault Account',
           textAlign: TextAlign.center,
           style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p8),
+        const SizedBox(height: AppSizes.p12),
         Text(
           'Enter your registered email and 6-digit PIN to access your vault.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withOpacity(0.5),
             fontSize: 14,
+            height: 1.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildTextField(
           controller: _emailController,
           label: 'Email Address',
           hint: 'the account email',
           icon: LucideIcons.mail,
         ),
-        const SizedBox(height: AppSizes.p16),
+        const SizedBox(height: AppSizes.p20),
         _buildPinField(),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildActionButton(
           text: _isLoading ? 'Sending code...' : 'Send code',
           subtitle: _isLoading ? 'Authenticating...' : null,
@@ -157,38 +163,44 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildVaultLogo(),
-        const SizedBox(height: AppSizes.p16),
+        const SizedBox(height: AppSizes.p20),
         Text(
           'Identity Verification',
           textAlign: TextAlign.center,
           style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p8),
+        const SizedBox(height: AppSizes.p12),
         Text(
           'We\'ve sent a 6-digit code to your email. Enter it below to continue.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withOpacity(0.5),
             fontSize: 14,
+            height: 1.5,
           ),
         ),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildOtpInput(),
-        const SizedBox(height: AppSizes.p24),
+        const SizedBox(height: AppSizes.p32),
         _buildActionButton(
           text: _isLoading ? 'Verifying...' : 'Verify and continue',
           onPressed: _isLoading ? null : _handleVerify,
         ),
         const SizedBox(height: AppSizes.p16),
         TextButton(
-          onPressed: () => setState(() => _isStepTwo = false),
-          child: Text(
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            setState(() => _isStepTwo = false);
+          },
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          child: const Text(
             'Didn’t receive code? Go back',
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -197,15 +209,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildVaultLogo() {
     return Container(
-      width: 48,
-      height: 48,
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.1),
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 12,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Center(
-        child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 24),
+        child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 28),
       ),
     );
   }
@@ -221,25 +240,25 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
-          height: 48,
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
           ),
           child: TextField(
             controller: controller,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.4), size: 18),
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.3), size: 18),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -254,48 +273,53 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Secure PIN',
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
             ),
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                HapticFeedback.lightImpact();
+              },
               child: Text(
                 'Forgot PIN?',
-                style: TextStyle(color: AppColors.primary, fontSize: 12),
+                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
-          height: 48,
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
           ),
           child: TextField(
             controller: _pinController,
             obscureText: !_isPinVisible,
             keyboardType: TextInputType.number,
             maxLength: 6,
-            style: const TextStyle(color: Colors.white, letterSpacing: 4),
+            style: const TextStyle(color: Colors.white, fontSize: 15, letterSpacing: 6),
             decoration: InputDecoration(
               counterText: '',
               hintText: '••••••',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14, letterSpacing: 4),
-              prefixIcon: Icon(LucideIcons.lock, color: Colors.white.withOpacity(0.4), size: 18),
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 15, letterSpacing: 6),
+              prefixIcon: Icon(LucideIcons.lock, color: Colors.white.withOpacity(0.3), size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPinVisible ? LucideIcons.eye : LucideIcons.eyeOff,
-                  color: Colors.white.withOpacity(0.4),
+                  color: Colors.white.withOpacity(0.3),
                   size: 18,
                 ),
-                onPressed: () => setState(() => _isPinVisible = !_isPinVisible),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _isPinVisible = !_isPinVisible);
+                },
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -305,11 +329,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildOtpInput() {
     return Container(
-      height: 64,
+      height: 68,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: TextField(
         controller: _otpController,
@@ -318,19 +342,19 @@ class _LoginScreenState extends State<LoginScreen> {
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 24,
+          fontSize: 26,
           fontWeight: FontWeight.bold,
-          letterSpacing: 16,
+          letterSpacing: 18,
         ),
         decoration: InputDecoration(
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.1),
-            letterSpacing: 16,
+            color: Colors.white.withOpacity(0.05),
+            letterSpacing: 18,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
@@ -343,26 +367,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 60,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          shadowColor: AppColors.primary.withOpacity(0.4),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               text,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
             ),
             if (subtitle != null)
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.7)),
+                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500),
               ),
           ],
         ),
@@ -378,26 +403,27 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Text(
               'New to Vault? ',
-              style: TextStyle(color: Colors.white.withOpacity(0.6)),
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
             ),
             GestureDetector(
-              onTap: () => context.push('/signup'),
-              child: Text(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.push('/signup');
+              },
+              child: const Text(
                 'Create Your Account',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSizes.p32),
+        const SizedBox(height: 48),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge(LucideIcons.shield, 'Bank-grade'),
-            const SizedBox(width: 24),
-            _buildBadge(LucideIcons.database, 'Encrypted'),
-            const SizedBox(width: 24),
-            _buildBadge(LucideIcons.layers, 'Secure'),
+            _buildBadge(LucideIcons.shield, 'Bank-grade security'),
+            const SizedBox(width: 32),
+            _buildBadge(LucideIcons.database, 'End-to-end encryption'),
           ],
         ),
       ],
@@ -405,13 +431,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildBadge(IconData icon, String label) {
-    return Column(
+    return Row(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.4), size: 20),
-        const SizedBox(height: 4),
+        Icon(icon, color: Colors.white.withOpacity(0.3), size: 16),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );
