@@ -1,0 +1,96 @@
+import 'package:equatable/equatable.dart';
+import '../../../models/vault_models.dart';
+
+abstract class TransactionEvent extends Equatable {
+  @override
+  List<Object?> get props => [];
+}
+
+class LoadFrequentRecipients extends TransactionEvent {}
+
+class SearchRecipients extends TransactionEvent {
+  final String query;
+  SearchRecipients(this.query);
+  @override
+  List<Object?> get props => [query];
+}
+
+class PerformVaultTransfer extends TransactionEvent {
+  final String receiverTag;
+  final double amount;
+  final String currency;
+  final String? description;
+  final String pin;
+
+  PerformVaultTransfer({
+    required this.receiverTag,
+    required this.amount,
+    required this.currency,
+    this.description,
+    required this.pin,
+  });
+
+  @override
+  List<Object?> get props => [receiverTag, amount, currency, description, pin];
+}
+
+class PerformMpesaDeposit extends TransactionEvent {
+  final String phoneNumber;
+  final double amount;
+  final String pin;
+
+  PerformMpesaDeposit({
+    required this.phoneNumber,
+    required this.amount,
+    required this.pin,
+  });
+
+  @override
+  List<Object?> get props => [phoneNumber, amount, pin];
+}
+
+class PerformStripeDeposit extends TransactionEvent {
+  final double amount;
+  final String currency;
+  final String pin;
+
+  PerformStripeDeposit({
+    required this.amount,
+    required this.currency,
+    required this.pin,
+  });
+
+  @override
+  List<Object?> get props => [amount, currency, pin];
+}
+
+class PerformWithdrawal extends TransactionEvent {
+  final double amount;
+  final String method;
+  final Map<String, dynamic> details;
+  final String pin;
+
+  PerformWithdrawal({
+    required this.amount,
+    required this.method,
+    required this.details,
+    required this.pin,
+  });
+
+  @override
+  List<Object?> get props => [amount, method, details, pin];
+}
+
+class TransactionStatusUpdated extends TransactionEvent {
+  final VaultTransaction transaction;
+  TransactionStatusUpdated(this.transaction);
+  @override
+  List<Object?> get props => [transaction];
+}
+
+class ToggleCurrency extends TransactionEvent {
+  final String currency;
+  ToggleCurrency(this.currency);
+  @override
+  List<Object?> get props => [currency];
+}
