@@ -136,7 +136,7 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
             scale: 0.8,
             child: Switch.adaptive(
               value: value,
-              activeColor: AppColors.primary,
+              activeTrackColor: AppColors.primary,
               onChanged: onChanged,
             ),
           ),
@@ -156,7 +156,7 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p12),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(AppSizes.p12),
             border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
           ),
@@ -220,7 +220,7 @@ class ActivityLogDrawer extends StatelessWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24),
                 itemCount: 20,
-                separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
+                separatorBuilder: (_, _) => Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
                 itemBuilder: (context, index) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,

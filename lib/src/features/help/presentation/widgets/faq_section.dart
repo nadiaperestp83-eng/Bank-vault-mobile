@@ -45,7 +45,7 @@ class _FAQSectionState extends State<FAQSection> {
         Text(
           'FREQUENTLY ASKED QUESTIONS',
           style: TextStyle(
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -57,7 +57,7 @@ class _FAQSectionState extends State<FAQSection> {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: filteredFaqs.length,
           separatorBuilder: (context, index) => Divider(
-            color: theme.dividerTheme.color ?? (theme.brightness == Brightness.dark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+            color: theme.dividerTheme.color ?? (theme.brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
             height: 1,
           ),
           itemBuilder: (context, index) {
@@ -93,7 +93,7 @@ class _FAQItemState extends State<_FAQItem> with SingleTickerProviderStateMixin 
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.01),
+        color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.01),
         borderRadius: BorderRadius.circular(16),
       ),
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -115,7 +115,7 @@ class _FAQItemState extends State<_FAQItem> with SingleTickerProviderStateMixin 
               duration: const Duration(milliseconds: 300),
               child: Icon(
                 LucideIcons.chevronDown,
-                color: _isExpanded ? colorScheme.primary : theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                color: _isExpanded ? colorScheme.primary : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
                 size: 20,
               ),
             ),
@@ -127,7 +127,7 @@ class _FAQItemState extends State<_FAQItem> with SingleTickerProviderStateMixin 
               child: Text(
                 widget.answer,
                 style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
                   fontSize: 14,
                   height: 1.6,
                   fontWeight: FontWeight.w300,

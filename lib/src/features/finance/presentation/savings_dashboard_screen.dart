@@ -75,7 +75,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                 color: isActive ? AppColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isActive ? AppColors.primary : Colors.black.withOpacity(0.1),
+                  color: isActive ? AppColors.primary : Colors.black.withValues(alpha: 0.1),
                 ),
               ),
               alignment: Alignment.center,
@@ -106,10 +106,10 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -132,7 +132,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'of KES 100,000 target',
-                    style: TextStyle(color: AppColors.primary.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: AppColors.primary.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -145,7 +145,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                     child: CircularProgressIndicator(
                       value: 0.45,
                       strokeWidth: 8,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                       strokeCap: StrokeCap.round,
                     ),
@@ -178,7 +178,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                 child: LinearProgressIndicator(
                   value: 0.45,
                   minHeight: 8,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
@@ -216,7 +216,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0)],
+                        colors: [AppColors.primary.withValues(alpha: 0.2), AppColors.primary.withValues(alpha: 0)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -248,9 +248,9 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.accent.withOpacity(0.05),
+        color: AppColors.accent.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.accent.withOpacity(0.1)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +276,7 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
             style: TextStyle(fontSize: 14, height: 1.4, color: AppColors.textPrimaryLight),
           ),
         ],
-      ).animate().shimmer(duration: 2.seconds, color: Colors.white.withOpacity(0.2)),
+      ).animate().shimmer(duration: 2.seconds, color: Colors.white.withValues(alpha: 0.2)),
     );
   }
 }

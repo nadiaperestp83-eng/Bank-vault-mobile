@@ -127,8 +127,8 @@ class _LoginScreenState extends State<LoginScreen> {
               end: Alignment.bottomRight,
               colors: [
                 theme.scaffoldBackgroundColor,
-                theme.scaffoldBackgroundColor.withOpacity(0.95),
-                theme.colorScheme.primary.withOpacity(isDark ? 0.05 : 0.03),
+                theme.scaffoldBackgroundColor.withValues(alpha: 0.95),
+                theme.colorScheme.primary.withValues(alpha: isDark ? 0.05 : 0.03),
               ],
             ),
           ),
@@ -200,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Enter your registered email and 6-digit PIN to access your vault.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             fontSize: 14,
             height: 1.5,
           ),
@@ -250,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'We\'ve sent a 6-digit code to your email. Enter it below to continue.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             fontSize: 14,
             height: 1.5,
           ),
@@ -267,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (_resendTimer > 0)
           Text(
             'Resend code in ${_resendTimer}s',
-            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
+            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
           )
         else
           TextButton(
@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
             HapticFeedback.lightImpact();
             setState(() => _isStepTwo = false);
           },
-          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.onSurface.withOpacity(0.5)),
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
           child: const Text(
             'Go back',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -299,12 +299,12 @@ class _LoginScreenState extends State<LoginScreen> {
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             blurRadius: 12,
             spreadRadius: 2,
           ),
@@ -332,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           label,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
             fontSize: 13,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -342,10 +342,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
           child: TextField(
@@ -353,8 +353,8 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.25), fontSize: 14),
-              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
@@ -377,7 +377,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Text(
               'Secure PIN',
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.9),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -398,10 +398,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
           child: TextField(
@@ -413,12 +413,12 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: InputDecoration(
               counterText: '',
               hintText: '••••••',
-              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.2), fontSize: 15, letterSpacing: 6),
-              prefixIcon: Icon(LucideIcons.lock, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.2), fontSize: 15, letterSpacing: 6),
+              prefixIcon: Icon(LucideIcons.lock, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPinVisible ? LucideIcons.eye : LucideIcons.eyeOff,
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   size: 18,
                 ),
                 onPressed: () {
@@ -442,10 +442,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       height: 68,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
         ),
       ),
       child: TextField(
@@ -463,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
             letterSpacing: 18,
           ),
           border: InputBorder.none,
@@ -491,7 +491,7 @@ class _LoginScreenState extends State<LoginScreen> {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 8,
-          shadowColor: theme.colorScheme.primary.withOpacity(0.4),
+          shadowColor: theme.colorScheme.primary.withValues(alpha: 0.4),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -503,7 +503,7 @@ class _LoginScreenState extends State<LoginScreen> {
             if (subtitle != null)
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
               ),
           ],
         ),
@@ -521,7 +521,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Text(
               'New to Vault? ',
-              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
             ),
             GestureDetector(
               onTap: () {
@@ -553,11 +553,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Row(
       children: [
-        Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 16),
+        Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 16),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
+          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );

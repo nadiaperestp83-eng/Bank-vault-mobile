@@ -63,23 +63,23 @@ class _ContactChannelsState extends State<ContactChannels> {
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.all(AppSizes.p20),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark.withOpacity(0.5) : colorScheme.surface,
+          color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? colorScheme.primary : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+            color: isSelected ? colorScheme.primary : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.2),
+                    color: colorScheme.primary.withValues(alpha: 0.2),
                     blurRadius: 15,
                     spreadRadius: 2,
                   ),
                 ]
               : (isDark ? [] : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -121,7 +121,7 @@ class _ContactChannelsState extends State<ContactChannels> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                       fontSize: 14,
                     ),
                   ),
@@ -181,10 +181,10 @@ class _ContactChannelsState extends State<ContactChannels> {
             decoration: BoxDecoration(
               color: theme.scaffoldBackgroundColor,
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 40,
                   offset: const Offset(0, 10),
                 )
@@ -209,16 +209,16 @@ class _ContactChannelsState extends State<ContactChannels> {
                   Text(
                     'Would you like to call us directly or schedule a return call?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                    style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
                   ),
                   const SizedBox(height: AppSizes.p24),
                   TextField(
                     style: theme.textTheme.bodyLarge,
                     decoration: InputDecoration(
                       hintText: 'Your Phone Number',
-                      hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withOpacity(0.3)),
+                      hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.3)),
                       filled: true,
-                      fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,

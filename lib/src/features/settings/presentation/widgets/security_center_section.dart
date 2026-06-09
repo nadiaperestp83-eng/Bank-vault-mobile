@@ -153,7 +153,7 @@ class _SecurityCenterSectionState extends State<SecurityCenterSection> {
         ),
         Switch.adaptive(
           value: value,
-          activeColor: AppColors.primary,
+          activeTrackColor: AppColors.primary,
           onChanged: onChanged,
         ),
       ],
@@ -324,7 +324,7 @@ class _PINChangeWorkflowState extends State<_PINChangeWorkflow> {
               borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
             ),
             filled: true,
-            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
             hintText: '••••••',
             hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
           ),

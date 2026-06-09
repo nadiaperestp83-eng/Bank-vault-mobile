@@ -7,9 +7,8 @@ import 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, VaultAuthState> {
   final AuthService _authService;
 
-  AuthBloc({required AuthService authService})
-      : _authService = authService,
-        super(VaultAuthInitial()) {
+  AuthBloc({required this._authService})
+      : super(VaultAuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<SendOtpRequested>(_onSendOtpRequested);
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
