@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:vault_os/src/features/settings/providers.dart';
+import 'package:vault_os/src/features/settings/data/activity_repository.dart';
 import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/profile_model.dart';
+import 'package:vault_os/src/models/activity_log_model.dart';
 
 class ActivityLogSection extends ConsumerWidget {
   const ActivityLogSection({super.key});
@@ -15,6 +18,7 @@ class ActivityLogSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferencesAsync = ref.watch(preferencesStreamProvider);
     final profileAsync = ref.watch(profileStreamProvider);
+    final recentLogsAsync = ref.watch(recentLogsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
 
@@ -30,7 +34,7 @@ class ActivityLogSection extends ConsumerWidget {
               ),
         ),
         const SizedBox(height: AppSizes.p16),
-        _buildRecentLogs(context),
+        _buildRecentLogs(context, recentLogsAsync),
         const SizedBox(height: AppSizes.p16),
         preferencesAsync.when(
           data: (prefs) => prefs != null 
@@ -43,7 +47,7 @@ class ActivityLogSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentLogs(BuildContext context) {
+  Widget _buildRecentLogs(BuildContext context, AsyncValue<List<ActivityLog>> logsAsync) {
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,17 +66,39 @@ class ActivityLogSection extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSizes.p8),
-          _buildLogItem(context, 'Login', 'Today, 10:45 AM'),
-          _buildLogItem(context, 'Profile Update', 'Today, 09:12 AM'),
-          _buildLogItem(context, 'Transfer to @sam', 'Yesterday, 04:30 PM'),
-          _buildLogItem(context, 'Security PIN Change', 'June 5, 11:20 AM'),
+          logsAsync.when(
+            data: (logs) {
+              if (logs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSizes.p16),
+                  child: Center(
+                    child: Text(
+                      'No recent activity',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                );
+              }
+              return Column(
+                children: logs.map((log) => _buildLogItem(context, log)).toList(),
+              );
+            },
+            loading: () => const Center(child: Padding(
+              padding: EdgeInsets.all(AppSizes.p16),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )),
+            error: (err, stack) => Center(
+              child: Text('Error loading activity', style: TextStyle(fontSize: 12, color: AppColors.error)),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLogItem(BuildContext context, String action, String timestamp) {
+  Widget _buildLogItem(BuildContext context, ActivityLog log) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final timestamp = DateFormat('MMM dd, yyyy HH:mm').format(log.createdAt);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.p8),
@@ -82,7 +108,7 @@ class ActivityLogSection extends ConsumerWidget {
           const SizedBox(width: AppSizes.p12),
           Expanded(
             child: Text(
-              action,
+              log.actionType,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
@@ -191,12 +217,13 @@ class ActivityLogSection extends ConsumerWidget {
   }
 }
 
-class ActivityLogDrawer extends StatelessWidget {
+class ActivityLogDrawer extends ConsumerWidget {
   const ActivityLogDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fullLogsAsync = ref.watch(fullLogsProvider);
 
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.85,
@@ -228,35 +255,58 @@ class ActivityLogDrawer extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24),
-                itemCount: 20,
-                separatorBuilder: (_, _) => Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      'Action $index', 
-                      style: TextStyle(
-                        fontSize: 14, 
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'June ${8 - (index ~/ 3)}, 2026', 
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    trailing: Icon(
-                      LucideIcons.chevronRight, 
-                      size: 16,
-                      color: isDark ? Colors.white24 : Colors.black26,
-                    ),
+              child: fullLogsAsync.when(
+                data: (logs) {
+                  if (logs.isEmpty) {
+                    return const Center(
+                      child: Text('No activity logs found'),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24),
+                    itemCount: logs.length,
+                    separatorBuilder: (_, _) => Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
+                    itemBuilder: (context, index) {
+                      final log = logs[index];
+                      final timestamp = DateFormat('MMM dd, yyyy HH:mm').format(log.createdAt);
+                      
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          log.actionType, 
+                          style: TextStyle(
+                            fontSize: 14, 
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        subtitle: Text(
+                          timestamp, 
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        trailing: Icon(
+                          LucideIcons.chevronRight, 
+                          size: 16,
+                          color: isDark ? Colors.white24 : Colors.black26,
+                        ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSizes.p24),
+                    child: Text(
+                      'Error loading full logs: $err',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
