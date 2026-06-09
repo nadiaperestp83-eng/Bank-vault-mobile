@@ -52,18 +52,15 @@ class FinanceLedger extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     child: Row(
                       children: [
-                        Expanded(child: Text(tx['date'] as String, style: const TextStyle(fontSize: 11))),
-                        Expanded(child: Text(tx['source'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500))),
-                        Expanded(child: Text(tx['type'] as String, style: const TextStyle(fontSize: 11))),
-                        Expanded(
-                          child: Text(
-                            tx['amount'] as String,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: (tx['amount'] as String).startsWith('+') ? Colors.green : Colors.red,
-                            ),
+                        Expanded(child: Text((tx['date'] as String?) ?? '', style: const TextStyle(fontSize: 11))),
+                        Expanded(child: Text((tx['source'] as String?) ?? '', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500))),
+                        Expanded(child: Text((tx['type'] as String?) ?? '', style: const TextStyle(fontSize: 11))),
+                        Text(
+                          (tx['amount'] as String?) ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: ((tx['amount'] as String?) ?? '').startsWith('+') ? Colors.green : Colors.red,
                           ),
                         ),
                       ],

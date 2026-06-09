@@ -404,7 +404,7 @@ class _TransactScreenState extends State<TransactScreen> {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    tx['type'] as String,
+                    (tx['type'] as String?) ?? '',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondaryLight),
                   ),
                 ),
@@ -413,9 +413,9 @@ class _TransactScreenState extends State<TransactScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(tx['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text((tx['title'] as String?) ?? 'Transaction', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       const SizedBox(height: 4),
-                      Text(tx['time'] as String, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 11)),
+                      Text((tx['time'] as String?) ?? 'Now', style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -423,11 +423,11 @@ class _TransactScreenState extends State<TransactScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      tx['amount'] as String,
+                      (tx['amount'] as String?) ?? '\$0.00',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: tx['isCredit'] as bool ? Colors.green : Colors.red,
+                        color: (tx['isCredit'] as bool? ?? false) ? Colors.green : Colors.red,
                       ),
                     ),
                     const Text('KES 12,450', style: TextStyle(fontSize: 10, color: AppColors.textSecondaryLight)),

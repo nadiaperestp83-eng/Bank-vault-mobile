@@ -163,7 +163,7 @@ class _HubCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                benefits[index]['label'] as String,
+                                (benefits[index]['label'] as String?) ?? '',
                                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
                               ),
                             ),
