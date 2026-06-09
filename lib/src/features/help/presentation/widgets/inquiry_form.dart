@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:vault_os/src/services/supabase_service.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 
@@ -15,6 +17,9 @@ class _InquiryFormState extends State<InquiryForm> {
   bool _isSubmitting = false;
   bool _isSuccess = false;
   bool _termsAgreed = false;
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _messageController = TextEditingController();
   int _charCount = 0;
 
@@ -28,6 +33,9 @@ class _InquiryFormState extends State<InquiryForm> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -35,12 +43,38 @@ class _InquiryFormState extends State<InquiryForm> {
   Future<void> _submit() async {
     if (_formKey.currentState!.validate() && _termsAgreed) {
       setState(() => _isSubmitting = true);
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _isSuccess = true;
-        });
+      
+      try {
+        final response = await SupabaseService.client.functions.invoke(
+          'send-support-email',
+          body: {
+            'firstName': _firstNameController.text.trim(),
+            'lastName': _lastNameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'message': _messageController.text.trim(),
+          },
+        );
+
+        if (response.status == 200) {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+              _isSuccess = true;
+            });
+          }
+        } else {
+          throw Exception('Failed to send inquiry');
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please try again later. Failed to send inquiry.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     }
   }
@@ -89,6 +123,7 @@ class _InquiryFormState extends State<InquiryForm> {
                   child: _buildTextField(
                     label: 'FIRST NAME',
                     hint: 'John',
+                    controller: _firstNameController,
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -97,6 +132,7 @@ class _InquiryFormState extends State<InquiryForm> {
                   child: _buildTextField(
                     label: 'LAST NAME',
                     hint: 'Doe',
+                    controller: _lastNameController,
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -106,6 +142,7 @@ class _InquiryFormState extends State<InquiryForm> {
             _buildTextField(
               label: 'EMAIL ADDRESS',
               hint: 'john.doe@example.com',
+              controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               validator: (v) => (v == null || !v.contains('@')) ? 'Invalid email' : null,
             ),
