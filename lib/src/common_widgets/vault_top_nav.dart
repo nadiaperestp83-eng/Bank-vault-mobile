@@ -31,12 +31,12 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           height: 64,
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor.withOpacity(0.7),
+            color: theme.scaffoldBackgroundColor.withValues(alpha: 0.7),
             border: Border(
               bottom: BorderSide(
                 color: isDark 
-                    ? Colors.white.withOpacity(0.08) 
-                    : theme.dividerTheme.color?.withOpacity(0.5) ?? theme.colorScheme.outline.withOpacity(0.2),
+                    ? Colors.white.withValues(alpha: 0.08) 
+                    : theme.dividerTheme.color?.withValues(alpha: 0.5) ?? theme.colorScheme.outline.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -84,7 +84,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.primary.withOpacity(0.3),
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -134,7 +134,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
               '$greeting, $emoji',
               style: theme.textTheme.labelSmall?.copyWith(
                 fontSize: 10,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             Text(
@@ -163,8 +163,8 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           color: isDark ? Colors.yellow : const Color(0xFF64748B),
           onTap: () {
             HapticFeedback.lightImpact();
-            ref.read(themeProvider.notifier).state =
-                isDark ? ThemeMode.light : ThemeMode.dark;
+            ref.read(themeProvider.notifier).setThemeMode(
+                isDark ? ThemeMode.light : ThemeMode.dark);
           },
           isCircular: true,
           hasGlow: true,
@@ -197,8 +197,8 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final defaultIconColor = theme.colorScheme.onSurface;
-    final backgroundColor = theme.colorScheme.onSurface.withOpacity(0.05);
-    final borderColor = theme.colorScheme.onSurface.withOpacity(0.1);
+    final backgroundColor = theme.colorScheme.onSurface.withValues(alpha: 0.05);
+    final borderColor = theme.colorScheme.onSurface.withValues(alpha: 0.1);
 
     return InkWell(
       onTap: onTap,
@@ -213,7 +213,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           border: Border.all(color: borderColor),
           boxShadow: hasGlow ? [
             BoxShadow(
-              color: (color ?? theme.colorScheme.primary).withOpacity(isDark ? 0.15 : 0.1),
+              color: (color ?? theme.colorScheme.primary).withValues(alpha: isDark ? 0.15 : 0.1),
               blurRadius: 8,
               spreadRadius: 1,
             )
@@ -268,7 +268,6 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
 
   Widget _buildProfileTrigger(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () {
@@ -280,9 +279,9 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         height: 36,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5), width: 2),
+          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2),
           gradient: LinearGradient(
-            colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.7)],
+            colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -309,7 +308,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
+            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -320,7 +319,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

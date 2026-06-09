@@ -27,7 +27,7 @@ class DangerZoneSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppSizes.p20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
@@ -38,14 +38,14 @@ class DangerZoneSection extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSizes.p20),
-                border: Border.all(color: AppColors.error.withOpacity(0.5), width: 2),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.5), width: 2),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.all(AppSizes.p16),
                 leading: Container(
                   padding: const EdgeInsets.all(AppSizes.p8),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(LucideIcons.trash2, color: AppColors.error),

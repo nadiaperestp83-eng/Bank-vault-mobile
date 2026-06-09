@@ -13,7 +13,7 @@ class ProfileSection extends StatefulWidget {
 
 class _ProfileSectionState extends State<ProfileSection> {
   final _nameController = TextEditingController(text: 'John Doe');
-  bool _isVerified = true;
+  final bool _isVerified = true;
 
   @override
   void dispose() {
@@ -97,8 +97,8 @@ class _ProfileSectionState extends State<ProfileSection> {
                 ),
                 decoration: BoxDecoration(
                   color: _isVerified
-                      ? AppColors.success.withOpacity(0.1)
-                      : AppColors.warning.withOpacity(0.1),
+                      ? AppColors.success.withValues(alpha: 0.1)
+                      : AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(100),
                   border: Border.all(
                     color: _isVerified ? AppColors.success : AppColors.warning,
@@ -175,7 +175,7 @@ class _ProfileSectionState extends State<ProfileSection> {
                         borderSide: const BorderSide(color: AppColors.primary),
                       ),
                       filled: true,
-                      fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
                     ),
                   ),
                 ],
@@ -233,7 +233,7 @@ class _ProfileSectionState extends State<ProfileSection> {
         Container(
           padding: const EdgeInsets.all(AppSizes.p12),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(AppSizes.p12),
             border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
           ),

@@ -101,10 +101,10 @@ class _HubCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -117,14 +117,14 @@ class _HubCard extends StatelessWidget {
             height: 140,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
             ),
             child: Center(
               child: Icon(icon, color: color, size: 48)
                   .animate(onPlay: (controller) => controller.repeat(reverse: true))
                   .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 2.seconds)
-                  .boxShadow(begin: const BoxShadow(blurRadius: 0), end: BoxShadow(color: color.withOpacity(0.2), blurRadius: 20)),
+                  .boxShadow(begin: const BoxShadow(blurRadius: 0), end: BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 20)),
             ),
           ),
           

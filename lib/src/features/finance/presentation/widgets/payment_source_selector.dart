@@ -33,7 +33,7 @@ class PaymentSourceSelector extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -91,10 +91,10 @@ class PaymentSourceSelector extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
+        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.05),
+          color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -103,7 +103,7 @@ class PaymentSourceSelector extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+              color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight, size: 20),

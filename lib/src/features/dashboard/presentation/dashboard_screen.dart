@@ -29,8 +29,8 @@ class DashboardScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.darkPrimary.withOpacity(0.08),
-                      AppColors.darkPrimary.withOpacity(0),
+                      AppColors.darkPrimary.withValues(alpha: 0.08),
+                      AppColors.darkPrimary.withValues(alpha: 0),
                     ],
                   ),
                 ),
@@ -46,8 +46,8 @@ class DashboardScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.darkPrimary.withOpacity(0.05),
-                      AppColors.darkPrimary.withOpacity(0),
+                      AppColors.darkPrimary.withValues(alpha: 0.05),
+                      AppColors.darkPrimary.withValues(alpha: 0),
                     ],
                   ),
                 ),
@@ -125,7 +125,7 @@ class DashboardScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(isDark ? 0.7 : 0.8),
+            theme.colorScheme.primary.withValues(alpha: isDark ? 0.7 : 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -133,7 +133,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.2),
+            color: theme.colorScheme.primary.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -145,7 +145,7 @@ class DashboardScreen extends StatelessWidget {
           Text(
             'TOTAL PORTFOLIO BALANCE',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -164,7 +164,7 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
@@ -223,7 +223,7 @@ class DashboardScreen extends StatelessWidget {
                   onPressed: () {},
                   style: theme.elevatedButtonTheme.style?.copyWith(
                     backgroundColor: WidgetStateProperty.all(
-                      theme.colorScheme.onSurface.withOpacity(0.05),
+                      theme.colorScheme.onSurface.withValues(alpha: 0.05),
                     ),
                     foregroundColor: WidgetStateProperty.all(theme.textTheme.bodyLarge?.color),
                   ),
@@ -283,8 +283,8 @@ class DashboardScreen extends StatelessWidget {
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          primaryColor.withOpacity(0.3),
-                          primaryColor.withOpacity(0.0),
+                          primaryColor.withValues(alpha: 0.3),
+                          primaryColor.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -352,9 +352,9 @@ class DashboardScreen extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
+                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
                       ),
                       child: Icon(LucideIcons.plus, color: theme.colorScheme.primary),
                     ),
@@ -367,7 +367,7 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                     child: Text(
                       contact['initials']!,
                       style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
@@ -430,7 +430,7 @@ class DashboardScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
+                      color: (isPositive ? Colors.green : Colors.red).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(

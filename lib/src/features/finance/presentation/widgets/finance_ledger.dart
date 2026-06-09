@@ -20,7 +20,7 @@ class FinanceLedger extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.black.withOpacity(0.05)),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           ),
           child: Column(
             children: [
@@ -28,7 +28,7 @@ class FinanceLedger extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: const Row(
@@ -45,7 +45,7 @@ class FinanceLedger extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: transactions.length,
-                separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, color: Colors.black.withOpacity(0.05)),
+                separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, color: Colors.black.withValues(alpha: 0.05)),
                 itemBuilder: (context, index) {
                   final tx = transactions[index];
                   return Padding(

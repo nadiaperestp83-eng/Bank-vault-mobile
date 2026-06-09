@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
-import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 
@@ -25,7 +24,8 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _agreeToTerms = false;
   String _selectedCountry = 'Kenya';
 
-  final _usernameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _pinPart1Controller = TextEditingController();
@@ -70,9 +70,10 @@ class _SignupScreenState extends State<SignupScreen> {
         email: _emailController.text,
         password: hashedPassword,
         data: {
-          'username': _usernameController.text,
+          'first_name': _firstNameController.text,
+          'last_name': _lastNameController.text,
           'phone': _phoneController.text,
-          'full_name': _usernameController.text,
+          'full_name': '${_firstNameController.text} ${_lastNameController.text}',
         },
       );
 
@@ -106,7 +107,8 @@ class _SignupScreenState extends State<SignupScreen> {
       if (res.user != null) {
         await SupabaseService.initializeUserDatabase(
           userId: res.user!.id,
-          username: _usernameController.text,
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
           email: _emailController.text,
           phone: _phoneController.text,
           pin: _pinPart1Controller.text,
@@ -145,8 +147,8 @@ class _SignupScreenState extends State<SignupScreen> {
             end: Alignment.bottomRight,
             colors: [
               theme.scaffoldBackgroundColor,
-              theme.scaffoldBackgroundColor.withOpacity(0.95),
-              theme.colorScheme.primary.withOpacity(isDark ? 0.05 : 0.03),
+              theme.scaffoldBackgroundColor.withValues(alpha: 0.95),
+              theme.colorScheme.primary.withValues(alpha: isDark ? 0.05 : 0.03),
             ],
           ),
         ),
@@ -202,7 +204,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Widget _buildStepper(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Row(
       children: List.generate(3, (index) {
@@ -212,10 +213,10 @@ class _SignupScreenState extends State<SignupScreen> {
             height: 4,
             margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
             decoration: BoxDecoration(
-              color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.08),
+              color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(2),
               boxShadow: isActive ? [
-                BoxShadow(color: theme.colorScheme.primary.withOpacity(0.3), blurRadius: 4),
+                BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.3), blurRadius: 4),
               ] : null,
             ),
           ),
@@ -256,15 +257,31 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: AppSizes.p8),
         Text(
           'Join the elite financial circle today.',
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
         ),
         const SizedBox(height: AppSizes.p24),
-        _buildTextField(
-          context: context,
-          controller: _usernameController,
-          label: 'Username',
-          hint: 'your unique identity',
-          icon: LucideIcons.user,
+        Row(
+          children: [
+            Expanded(
+              child: _buildTextField(
+                context: context,
+                controller: _firstNameController,
+                label: 'First Name',
+                hint: 'your name',
+                icon: LucideIcons.user,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTextField(
+                context: context,
+                controller: _lastNameController,
+                label: 'Last Name',
+                hint: 'surname',
+                icon: LucideIcons.user,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSizes.p16),
         _buildTextField(
@@ -325,7 +342,7 @@ class _SignupScreenState extends State<SignupScreen> {
           'We\'ve sent a 6-digit code to ${_emailController.text}.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             fontSize: 14,
             height: 1.5,
           ),
@@ -375,7 +392,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           'Welcome to Vault. Your secure financial future starts now.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), height: 1.5),
+          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: AppSizes.p40),
         _buildActionButton(
@@ -407,7 +424,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           label,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
             fontSize: 13,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -417,10 +434,10 @@ class _SignupScreenState extends State<SignupScreen> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
           child: TextField(
@@ -429,8 +446,8 @@ class _SignupScreenState extends State<SignupScreen> {
             style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.25), fontSize: 14),
-              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.25), fontSize: 14),
+              prefixIcon: Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
@@ -450,7 +467,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           'Country',
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
             fontSize: 13,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -461,10 +478,10 @@ class _SignupScreenState extends State<SignupScreen> {
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+            color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
           child: DropdownButtonHideUnderline(
@@ -472,7 +489,7 @@ class _SignupScreenState extends State<SignupScreen> {
               value: _selectedCountry,
               isExpanded: true,
               dropdownColor: theme.scaffoldBackgroundColor,
-              icon: Icon(LucideIcons.chevronDown, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 18),
+              icon: Icon(LucideIcons.chevronDown, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 18),
               style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15),
               items: _countries.map((String country) {
                 return DropdownMenuItem<String>(
@@ -502,7 +519,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Text(
           'Secure PIN Setup',
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.9),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
             fontSize: 13,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -543,10 +560,10 @@ class _SignupScreenState extends State<SignupScreen> {
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
         ),
       ),
       child: TextField(
@@ -559,7 +576,7 @@ class _SignupScreenState extends State<SignupScreen> {
         decoration: InputDecoration(
           counterText: '',
           hintText: label,
-          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.2), fontSize: 12, letterSpacing: 1),
+          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.2), fontSize: 12, letterSpacing: 1),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
@@ -582,7 +599,7 @@ class _SignupScreenState extends State<SignupScreen> {
               setState(() => _agreeToTerms = value ?? false);
             },
             activeColor: theme.colorScheme.primary,
-            side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.2)),
+            side: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
@@ -590,7 +607,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Expanded(
           child: Text(
             'I agree to the Terms of Service and Privacy Policy.',
-            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
+            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12),
           ),
         ),
       ],
@@ -604,10 +621,10 @@ class _SignupScreenState extends State<SignupScreen> {
     return Container(
       height: 68,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.08) : theme.colorScheme.primary.withOpacity(0.1),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.colorScheme.primary.withValues(alpha: 0.1),
         ),
       ),
       child: TextField(
@@ -625,7 +642,7 @@ class _SignupScreenState extends State<SignupScreen> {
           counterText: '',
           hintText: '000000',
           hintStyle: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
             letterSpacing: 18,
           ),
           border: InputBorder.none,
@@ -652,7 +669,7 @@ class _SignupScreenState extends State<SignupScreen> {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 8,
-          shadowColor: theme.colorScheme.primary.withOpacity(0.4),
+          shadowColor: theme.colorScheme.primary.withValues(alpha: 0.4),
         ),
         child: Text(
           text,
@@ -672,7 +689,7 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             Text(
               'Already have an account? ',
-              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
             ),
             GestureDetector(
               onTap: () {
@@ -704,11 +721,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
     return Row(
       children: [
-        Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.3), size: 16),
+        Icon(icon, color: theme.colorScheme.onSurface.withValues(alpha: 0.3), size: 16),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.w500),
+          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.3), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
     );

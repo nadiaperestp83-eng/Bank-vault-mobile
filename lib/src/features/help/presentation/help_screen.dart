@@ -102,7 +102,7 @@ class _HelpScreenState extends State<HelpScreen> {
         Container(
           padding: const EdgeInsets.all(AppSizes.p12),
           decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(LucideIcons.lifeBuoy, color: colorScheme.primary, size: 24),
@@ -117,19 +117,19 @@ class _HelpScreenState extends State<HelpScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
       ),
       child: TextField(
         controller: _searchController,
         style: theme.textTheme.bodyLarge,
         decoration: InputDecoration(
           hintText: 'Search FAQ, guides, and more...',
-          hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withOpacity(0.3)),
+          hintStyle: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.3)),
           prefixIcon: Icon(
             LucideIcons.search, 
-            color: theme.textTheme.bodyLarge?.color?.withOpacity(0.5), 
+            color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5), 
             size: 20
           ),
           border: InputBorder.none,
@@ -151,7 +151,7 @@ class _HelpScreenState extends State<HelpScreen> {
           Text(
             'OFFICIAL SUPPORT: +1 (800) VAULT-OS',
             style: TextStyle(
-              color: baseColor.withOpacity(0.5),
+              color: baseColor.withValues(alpha: 0.5),
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
@@ -161,7 +161,7 @@ class _HelpScreenState extends State<HelpScreen> {
           Text(
             'MON - FRI: 08:00 AM - 08:00 PM EST',
             style: TextStyle(
-              color: baseColor.withOpacity(0.3),
+              color: baseColor.withValues(alpha: 0.3),
               fontSize: 9,
               letterSpacing: 1.1,
             ),

@@ -45,7 +45,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
             ),
             Switch.adaptive(
               value: _isMerchantModeEnabled,
-              activeColor: AppColors.primary,
+              activeTrackColor: AppColors.primary,
               onChanged: (value) {
                 setState(() => _isMerchantModeEnabled = value);
               },
@@ -79,7 +79,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
           ElevatedButton(
             onPressed: () => setState(() => _isMerchantModeEnabled = true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               foregroundColor: AppColors.primary,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -119,7 +119,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               ),
               const SizedBox(height: AppSizes.p8),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 dropdownColor: isDark ? AppColors.darkBackground : Colors.white,
                 style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
@@ -133,7 +133,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
                     borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
                   ),
                   filled: true,
-                  fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                  fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
                 ),
                 items: ['Retail', 'Services', 'Food & Drink', 'Tech', 'Other']
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -161,8 +161,6 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
   }
 
   Widget _buildQREngine() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GlassCard(
       child: Column(
         children: [
@@ -178,7 +176,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               borderRadius: BorderRadius.circular(AppSizes.p24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -272,7 +270,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
     return Container(
       padding: const EdgeInsets.all(AppSizes.p8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(AppSizes.p12),
         border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
       ),
@@ -330,7 +328,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
             ),
             filled: true,
-            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
             counterText: '',
           ),
         ),

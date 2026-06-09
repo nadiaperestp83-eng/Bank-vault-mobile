@@ -7,7 +7,7 @@ class SupabaseService {
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: dotenv.env['VITE_SUPABASE_URL']!,
-      anonKey: dotenv.env['VITE_SUPABASE_ANON_KEY']!,
+      publishableKey: dotenv.env['VITE_SUPABASE_ANON_KEY']!,
     );
   }
 
@@ -21,18 +21,22 @@ class SupabaseService {
 
   static Future<void> initializeUserDatabase({
     required String userId,
-    required String username,
+    required String firstName,
+    required String lastName,
     required String email,
     required String phone,
     required String pin,
+    String? username,
   }) async {
-    // 1. Generate KYC Tag (e.g., @username)
-    final kycTag = '@${username.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}';
+    // 1. Generate KYC Tag (e.g., @username or @firstname)
+    final tagBase = username ?? firstName;
+    final kycTag = '@${tagBase.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}';
 
     // 2. Create Profile
     await client.from('profiles').upsert({
       'id': userId,
-      'first_name': username,
+      'first_name': firstName,
+      'last_name': lastName,
       'email': email,
       'phone_number': phone,
       'pin_hash': hashPin(pin),

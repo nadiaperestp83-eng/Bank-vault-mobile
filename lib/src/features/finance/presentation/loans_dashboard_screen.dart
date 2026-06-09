@@ -58,7 +58,7 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +69,7 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.05),
+              color: Colors.grey.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const TextField(
@@ -100,7 +100,7 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
                     decoration: BoxDecoration(
                       color: isSelected ? const Color(0xFF334155) : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isSelected ? const Color(0xFF334155) : Colors.black.withOpacity(0.1)),
+                      border: Border.all(color: isSelected ? const Color(0xFF334155) : Colors.black.withValues(alpha: 0.1)),
                     ),
                     child: Text(
                       period,
@@ -120,9 +120,9 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF334155).withOpacity(0.03),
+              color: const Color(0xFF334155).withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF334155).withOpacity(0.05)),
+              border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.05)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -174,7 +174,7 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +186,7 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('Verified', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -220,8 +220,8 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
           height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isMet ? AppColors.primary : Colors.grey.withOpacity(0.3),
-            boxShadow: isMet ? [BoxShadow(color: AppColors.primary.withOpacity(0.5), blurRadius: 8)] : null,
+            color: isMet ? AppColors.primary : Colors.grey.withValues(alpha: 0.3),
+            boxShadow: isMet ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.5), blurRadius: 8)] : null,
           ),
         ),
         const SizedBox(width: 12),
@@ -278,11 +278,11 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
           ElevatedButton(
             onPressed: () => PaymentSourceSelector.show(context, 'Repay Loan'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 50),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               elevation: 0,
             ),
             child: const Text('Repay Now', style: TextStyle(fontWeight: FontWeight.bold)),

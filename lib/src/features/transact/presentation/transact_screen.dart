@@ -3,7 +3,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
-import 'dart:ui';
 
 class TransactScreen extends StatefulWidget {
   const TransactScreen({super.key});
@@ -46,7 +45,7 @@ class _TransactScreenState extends State<TransactScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -143,7 +142,7 @@ class _TransactScreenState extends State<TransactScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.05),
+            color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -166,7 +165,7 @@ class _TransactScreenState extends State<TransactScreen> {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: isAdd ? AppColors.primary.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+            backgroundColor: isAdd ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
             child: isAdd 
                 ? const Icon(LucideIcons.plus, color: AppColors.primary)
                 : Text(initials!, style: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
@@ -207,9 +206,9 @@ class _TransactScreenState extends State<TransactScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+        color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isSelected ? AppColors.primary : Colors.black.withOpacity(0.05)),
+        border: Border.all(color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05)),
       ),
       child: Text(
         label,
@@ -226,9 +225,9 @@ class _TransactScreenState extends State<TransactScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -264,7 +263,7 @@ class _TransactScreenState extends State<TransactScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: const Row(
         children: [
@@ -284,7 +283,7 @@ class _TransactScreenState extends State<TransactScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
@@ -322,7 +321,7 @@ class _TransactScreenState extends State<TransactScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +359,7 @@ class _TransactScreenState extends State<TransactScreen> {
         minimumSize: const Size(double.infinity, 64),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         elevation: 10,
-        shadowColor: AppColors.primary.withOpacity(0.4),
+        shadowColor: AppColors.primary.withValues(alpha: 0.4),
       ),
       child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
     );
@@ -374,7 +373,7 @@ class _TransactScreenState extends State<TransactScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Transaction Ledger', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            Icon(LucideIcons.search, size: 18, color: Colors.black.withOpacity(0.4)),
+            Icon(LucideIcons.search, size: 18, color: Colors.black.withValues(alpha: 0.4)),
           ],
         ),
         const SizedBox(height: 20),
@@ -399,7 +398,7 @@ class _TransactScreenState extends State<TransactScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   alignment: Alignment.center,
@@ -464,7 +463,7 @@ class _TransactScreenState extends State<TransactScreen> {
               backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: isSelected ? Colors.transparent : Colors.black.withOpacity(0.05)),
+                side: BorderSide(color: isSelected ? Colors.transparent : Colors.black.withValues(alpha: 0.05)),
               ),
             ),
           );
