@@ -1,64 +1,125 @@
+import 'dart:ui' as ui;
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:vault_os/src/features/settings/providers.dart';
+import 'package:vault_os/src/models/merchant_model.dart';
+import 'package:vault_os/src/models/profile_model.dart';
 
-class BusinessProfileSection extends StatefulWidget {
+class BusinessProfileSection extends ConsumerStatefulWidget {
   const BusinessProfileSection({super.key});
 
   @override
-  State<BusinessProfileSection> createState() => _BusinessProfileSectionState();
+  ConsumerState<BusinessProfileSection> createState() => _BusinessProfileSectionState();
 }
 
-class _BusinessProfileSectionState extends State<BusinessProfileSection> {
-  bool _isMerchantModeEnabled = false;
-  String _selectedCategory = 'Retail';
+class _BusinessProfileSectionState extends ConsumerState<BusinessProfileSection> {
+  final GlobalKey _qrKey = GlobalKey();
   final _businessNameController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _businessTypeController = TextEditingController();
+  String _selectedCategory = 'Retail';
 
   @override
   void dispose() {
     _businessNameController.dispose();
-    _descriptionController.dispose();
+    _businessTypeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleMerchantMode(bool enabled, String userId) async {
+    if (enabled) {
+      await ref.read(settingsServiceProvider).activateMerchantMode(
+        userId,
+        _businessNameController.text.isEmpty ? 'My Business' : _businessNameController.text,
+        _selectedCategory,
+      );
+    }
+  }
+
+  Future<void> _downloadQR() async {
+    try {
+      RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final directory = await getTemporaryDirectory();
+      final imagePath = await File('${directory.path}/business_qr.png').create();
+      await imagePath.writeAsBytes(pngBytes);
+
+      await Share.shareXFiles([XFile(imagePath.path)], text: 'My Business QR Code');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving QR: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(profileStreamProvider);
+    final merchantsAsync = ref.watch(merchantsStreamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'BUSINESS PROFILE',
-              style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  ),
-            ),
-            Switch.adaptive(
-              value: _isMerchantModeEnabled,
-              activeTrackColor: AppColors.primary,
-              onChanged: (value) {
-                setState(() => _isMerchantModeEnabled = value);
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSizes.p8),
-        _isMerchantModeEnabled ? _buildActiveForm() : _buildInactiveState(),
-      ],
+    return profileAsync.when(
+      data: (profile) {
+        if (profile == null) return const SizedBox.shrink();
+
+        return merchantsAsync.when(
+          data: (merchants) {
+            final activeMerchant = merchants.isEmpty ? null : merchants.firstWhere((m) => m.isActive, orElse: () => merchants.first);
+            final isMerchantModeEnabled = activeMerchant?.isActive ?? false;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'BUSINESS PROFILE',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                    ),
+                    Switch.adaptive(
+                      value: isMerchantModeEnabled,
+                      activeTrackColor: AppColors.primary,
+                      onChanged: (value) => _toggleMerchantMode(value, profile.id),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.p16),
+                isMerchantModeEnabled 
+                  ? _buildActiveForm(profile, activeMerchant) 
+                  : _buildInactiveState(profile.id),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
     );
   }
 
-  Widget _buildInactiveState() {
+  Widget _buildInactiveState(String userId) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GlassCard(
       child: Column(
@@ -77,7 +138,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
           ),
           const SizedBox(height: AppSizes.p24),
           ElevatedButton(
-            onPressed: () => setState(() => _isMerchantModeEnabled = true),
+            onPressed: () => _toggleMerchantMode(true, userId),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               foregroundColor: AppColors.primary,
@@ -93,9 +154,14 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
     );
   }
 
-  Widget _buildActiveForm() {
+  Widget _buildActiveForm(Profile profile, Merchant? merchant) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
+
+    if (merchant != null && _businessNameController.text.isEmpty) {
+      _businessNameController.text = merchant.businessName;
+      _selectedCategory = merchant.businessType;
+    }
 
     return Column(
       children: [
@@ -119,7 +185,9 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
               ),
               const SizedBox(height: AppSizes.p8),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
+                value: ['Retail', 'Services', 'Food & Drink', 'Tech', 'Other'].contains(_selectedCategory) 
+                    ? _selectedCategory 
+                    : 'Retail',
                 dropdownColor: isDark ? AppColors.darkBackground : Colors.white,
                 style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
@@ -140,27 +208,21 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
                     .toList(),
                 onChanged: (value) => setState(() => _selectedCategory = value!),
               ),
-              const SizedBox(height: AppSizes.p16),
-              _buildTextField(
-                label: 'DESCRIPTION (Max 160 chars)',
-                controller: _descriptionController,
-                hint: 'Tell customers about your business...',
-                icon: LucideIcons.textCursorInput,
-                maxLines: 3,
-                maxLength: 160,
-              ),
             ],
           ),
         ),
         const SizedBox(height: AppSizes.p16),
-        _buildQREngine(),
+        _buildQREngine(profile),
         const SizedBox(height: AppSizes.p16),
         _buildHowItWorks(),
       ],
     );
   }
 
-  Widget _buildQREngine() {
+  Widget _buildQREngine(Profile profile) {
+    final String baseUrl = 'https://vault.os';
+    final String payUrl = '$baseUrl/pay/${profile.kycTag.replaceAll('@', '')}';
+
     return GlassCard(
       child: Column(
         children: [
@@ -169,33 +231,27 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
             style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
           ),
           const SizedBox(height: AppSizes.p24),
-          Container(
-            padding: const EdgeInsets.all(AppSizes.p16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppSizes.p24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+          RepaintBoundary(
+            key: _qrKey,
+            child: Container(
+              padding: const EdgeInsets.all(AppSizes.p16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppSizes.p24),
+              ),
+              child: QrImageView(
+                data: payUrl,
+                version: QrVersions.auto,
+                size: 200.0,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: AppColors.primary,
                 ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Placeholder for QR Code
-                const Icon(LucideIcons.qrCode, size: 180, color: AppColors.lightHeading),
-                Container(
-                  padding: const EdgeInsets.all(AppSizes.p4),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(LucideIcons.zap, color: AppColors.primary, size: 32),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Colors.black,
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: AppSizes.p24),
@@ -203,7 +259,7 @@ class _BusinessProfileSectionState extends State<BusinessProfileSection> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: _downloadQR,
                   icon: const Icon(LucideIcons.download, size: 18),
                   label: const Text('Download QR'),
                   style: OutlinedButton.styleFrom(

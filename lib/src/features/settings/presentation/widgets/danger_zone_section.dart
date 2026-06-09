@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:vault_os/src/features/settings/providers.dart';
 
-class DangerZoneSection extends StatelessWidget {
+class DangerZoneSection extends ConsumerWidget {
   const DangerZoneSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -74,7 +76,7 @@ class DangerZoneSection extends StatelessWidget {
       barrierDismissible: false,
       barrierLabel: 'Deletion',
       transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (context, anim1, anim2) => const _AccountDeletionWorkflow(),
+      pageBuilder: (context, anim1, anim2) => const AccountDeletionWorkflow(),
       transitionBuilder: (context, anim1, anim2, child) {
         return ScaleTransition(
           scale: Tween<double>(begin: 0.9, end: 1.0).animate(
@@ -87,26 +89,69 @@ class DangerZoneSection extends StatelessWidget {
   }
 }
 
-class _AccountDeletionWorkflow extends StatefulWidget {
-  const _AccountDeletionWorkflow();
+class AccountDeletionWorkflow extends ConsumerStatefulWidget {
+  const AccountDeletionWorkflow({super.key});
 
   @override
-  State<_AccountDeletionWorkflow> createState() => _AccountDeletionWorkflowState();
+  ConsumerState<AccountDeletionWorkflow> createState() => _AccountDeletionWorkflowState();
 }
 
-class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
+class _AccountDeletionWorkflowState extends ConsumerState<AccountDeletionWorkflow> {
   int _step = 1;
-  bool _isScanning = true;
+  bool _isLoading = true;
+  Map<String, dynamic>? _assetCheckResult;
+  final _emailController = TextEditingController();
+  bool _canDelete = false;
 
   @override
   void initState() {
     super.initState();
-    _startScan();
+    _checkAssets();
   }
 
-  void _startScan() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _isScanning = false);
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkAssets() async {
+    final profile = ref.read(profileStreamProvider).value;
+    if (profile == null) return;
+
+    try {
+      final result = await ref.read(settingsServiceProvider).checkAssetsForDeletion(profile.id);
+      if (mounted) {
+        setState(() {
+          _assetCheckResult = result;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Asset check failed: $e')));
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  Future<void> _requestDeletion() async {
+    final profile = ref.read(profileStreamProvider).value;
+    final user = ref.read(authServiceProvider).currentUser;
+    if (profile == null || user == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(settingsServiceProvider).requestAccountDeletion(profile.id, user.email!);
+      if (mounted) setState(() => _step = 3);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deletion request failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -134,6 +179,20 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
   Widget _buildAssetCheck() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    if (_isLoading) {
+      return const Column(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: AppSizes.p16),
+          Text('Performing Asset Check...'),
+        ],
+      );
+    }
+
+    final hasAssets = (_assetCheckResult?['wallet_balance'] as num? ?? 0) > 0 ||
+                     (_assetCheckResult?['active_loans'] as int? ?? 0) > 0 ||
+                     (_assetCheckResult?['active_savings_goals'] as int? ?? 0) > 0;
+
     return Column(
       children: [
         const Icon(LucideIcons.search, size: 48, color: AppColors.primary),
@@ -149,16 +208,28 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         ),
         const SizedBox(height: AppSizes.p24),
-        if (_isScanning)
-          const CircularProgressIndicator()
-        else ...[
-          _buildCheckItem('Wallet Balance', 'Empty', true),
-          _buildCheckItem('Active Loans', 'None', true),
-          _buildCheckItem('Savings Goals', '1 Active', false),
-          const SizedBox(height: AppSizes.p24),
+        _buildCheckItem('Wallet Balance', _assetCheckResult?['wallet_balance']?.toString() ?? '0', (_assetCheckResult?['wallet_balance'] as num? ?? 0) == 0),
+        _buildCheckItem('Active Loans', _assetCheckResult?['active_loans']?.toString() ?? '0', (_assetCheckResult?['active_loans'] as int? ?? 0) == 0),
+        _buildCheckItem('Savings Goals', _assetCheckResult?['active_savings_goals']?.toString() ?? '0', (_assetCheckResult?['active_savings_goals'] as int? ?? 0) == 0),
+        const SizedBox(height: AppSizes.p24),
+        if (hasAssets) ...[
           const Text(
-            'Warning: You still have an active savings goal. Deleting your account will forfeit these funds.',
+            'Warning: You have active assets or liabilities. Please clear them before deleting your account.',
             style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.p24),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Back to Settings'),
+            ),
+          ),
+        ] else ...[
+          const Text(
+            'All checks passed. You can proceed with deletion.',
+            style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSizes.p24),
@@ -219,6 +290,7 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
 
   Widget _buildConfirmation() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = ref.read(authServiceProvider).currentUser;
 
     return Column(
       children: [
@@ -230,34 +302,28 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
         ),
         const SizedBox(height: AppSizes.p8),
         Text(
-          'This action is IRREVERSIBLE. Please enter your credentials to confirm.',
+          'To proceed, please type your email address: ${user?.email}',
           textAlign: TextAlign.center,
-          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 12),
         ),
         const SizedBox(height: AppSizes.p24),
         TextField(
+          controller: _emailController,
           style: TextStyle(color: isDark ? Colors.white : Colors.black),
           decoration: InputDecoration(
-            hintText: 'Email Address',
+            hintText: 'Enter your email',
             hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
           ),
-        ),
-        const SizedBox(height: AppSizes.p12),
-        TextField(
-          obscureText: true,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-          decoration: InputDecoration(
-            hintText: 'Password',
-            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
-          ),
+          onChanged: (val) {
+            setState(() => _canDelete = val.trim() == user?.email);
+          },
         ),
         const SizedBox(height: AppSizes.p24),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => setState(() => _step = 3),
+            onPressed: _canDelete ? _requestDeletion : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
@@ -296,7 +362,7 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
+              Navigator.pop(context);
               context.go('/login');
             },
             style: ElevatedButton.styleFrom(
@@ -304,7 +370,7 @@ class _AccountDeletionWorkflowState extends State<_AccountDeletionWorkflow> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
             ),
-            child: const Text('Back to Home'),
+            child: const Text('Back to Login'),
           ),
         ),
       ],
