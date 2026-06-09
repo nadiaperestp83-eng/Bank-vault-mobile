@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:vault_os/src/features/settings/providers.dart';
+import 'package:vault_os/src/models/preferences_model.dart';
+import 'package:vault_os/src/models/profile_model.dart';
 
-class ActivityLogSection extends StatefulWidget {
+class ActivityLogSection extends ConsumerWidget {
   const ActivityLogSection({super.key});
 
   @override
-  State<ActivityLogSection> createState() => _ActivityLogSectionState();
-}
-
-class _ActivityLogSectionState extends State<ActivityLogSection> {
-  bool _notifTransfer = true;
-  bool _notifLogin = true;
-  bool _notifAI = false;
-
-  String _currency = 'USD';
-  String _theme = 'System';
-  String _language = 'English';
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preferencesAsync = ref.watch(preferencesStreamProvider);
+    final profileAsync = ref.watch(profileStreamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
 
@@ -39,7 +32,13 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
         const SizedBox(height: AppSizes.p16),
         _buildRecentLogs(context),
         const SizedBox(height: AppSizes.p16),
-        _buildPreferences(),
+        preferencesAsync.when(
+          data: (prefs) => prefs != null 
+            ? _buildPreferences(context, ref, prefs, profileAsync.value) 
+            : const SizedBox.shrink(),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -63,16 +62,16 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
             ],
           ),
           const SizedBox(height: AppSizes.p8),
-          _buildLogItem('Login', 'Today, 10:45 AM'),
-          _buildLogItem('Profile Update', 'Today, 09:12 AM'),
-          _buildLogItem('Transfer to @sam', 'Yesterday, 04:30 PM'),
-          _buildLogItem('Security PIN Change', 'June 5, 11:20 AM'),
+          _buildLogItem(context, 'Login', 'Today, 10:45 AM'),
+          _buildLogItem(context, 'Profile Update', 'Today, 09:12 AM'),
+          _buildLogItem(context, 'Transfer to @sam', 'Yesterday, 04:30 PM'),
+          _buildLogItem(context, 'Security PIN Change', 'June 5, 11:20 AM'),
         ],
       ),
     );
   }
 
-  Widget _buildLogItem(String action, String timestamp) {
+  Widget _buildLogItem(BuildContext context, String action, String timestamp) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -96,7 +95,10 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
     );
   }
 
-  Widget _buildPreferences() {
+  Widget _buildPreferences(BuildContext context, WidgetRef ref, UserPreferences prefs, Profile? profile) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final settingsService = ref.read(settingsServiceProvider);
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,26 +108,32 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           ),
           const SizedBox(height: AppSizes.p8),
-          _buildPreferenceSwitch('Transfer Received', _notifTransfer, (v) => setState(() => _notifTransfer = v)),
-          _buildPreferenceSwitch('Login Alert', _notifLogin, (v) => setState(() => _notifLogin = v)),
-          _buildPreferenceSwitch('AI Insights', _notifAI, (v) => setState(() => _notifAI = v)),
+          _buildPreferenceSwitch(context, 'Transfer Received', prefs.notificationsTransferReceived, 
+            (v) => settingsService.updatePreferences(prefs.copyWith(notificationsTransferReceived: v))),
+          _buildPreferenceSwitch(context, 'Login Alert', prefs.notificationsAccountLogin, 
+            (v) => settingsService.updatePreferences(prefs.copyWith(notificationsAccountLogin: v))),
+          _buildPreferenceSwitch(context, 'AI Insights', prefs.notificationsAiInsights, 
+            (v) => settingsService.updatePreferences(prefs.copyWith(notificationsAiInsights: v))),
           const Divider(height: AppSizes.p24),
           const Text(
             'SYSTEM',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           ),
           const SizedBox(height: AppSizes.p16),
-          _buildDropdown('Primary Currency', _currency, ['USD', 'KES', 'EUR', 'GBP'], (v) => setState(() => _currency = v!)),
+          _buildDropdown(context, 'Primary Currency', profile?.primaryCurrency ?? 'KES', ['USD', 'KES', 'EUR', 'GBP'], 
+            (v) => settingsService.updateCurrency(prefs.userId, v!)),
           const SizedBox(height: AppSizes.p12),
-          _buildDropdown('App Theme', _theme, ['Light', 'Dark', 'System'], (v) => setState(() => _theme = v!)),
+          _buildDropdown(context, 'App Theme', prefs.theme.substring(0, 1).toUpperCase() + prefs.theme.substring(1), ['Light', 'Dark', 'System'], 
+            (v) => settingsService.updateTheme(prefs.userId, v!.toLowerCase())),
           const SizedBox(height: AppSizes.p12),
-          _buildDropdown('Language', _language, ['English', 'Swahili', 'French'], (v) => setState(() => _language = v!)),
+          _buildDropdown(context, 'Language', prefs.language, ['en', 'sw', 'fr'], 
+            (v) => settingsService.updateLanguage(prefs.userId, v!)),
         ],
       ),
     );
   }
 
-  Widget _buildPreferenceSwitch(String title, bool value, ValueChanged<bool> onChanged) {
+  Widget _buildPreferenceSwitch(BuildContext context, String title, bool value, ValueChanged<bool> onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.p4),
       child: Row(
@@ -145,8 +153,11 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
     );
   }
 
-  Widget _buildDropdown(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(BuildContext context, String label, String value, List<String> items, ValueChanged<String?> onChanged) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Safety check: ensure value exists in items
+    final String effectiveValue = items.contains(value) ? value : items.first;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +173,7 @@ class _ActivityLogSectionState extends State<ActivityLogSection> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: value,
+              value: effectiveValue,
               isExpanded: true,
               dropdownColor: isDark ? AppColors.darkBackground : Colors.white,
               style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),

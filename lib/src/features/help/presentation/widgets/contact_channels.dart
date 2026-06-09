@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -26,7 +27,7 @@ class _ContactChannelsState extends State<ContactChannels> {
           status: 'ALWAYS ONLINE',
           onTap: () {
             setState(() => _selectedIndex = 0);
-            _showCallbackDialog(context);
+            showCallWorkflow(context);
           },
         ),
         const SizedBox(height: AppSizes.p16),
@@ -34,10 +35,20 @@ class _ContactChannelsState extends State<ContactChannels> {
           index: 1,
           icon: LucideIcons.mail,
           title: 'Official Email',
-          subtitle: 'support@vaultos.com',
+          subtitle: 'alphine886@gmail.com',
           status: '24H RESPONSE',
-          onTap: () {
+          onTap: () async {
             setState(() => _selectedIndex = 1);
+            final Uri emailLaunchUri = Uri(
+              scheme: 'mailto',
+              path: 'alphine886@gmail.com',
+              queryParameters: {
+                'subject': 'Vault.OS Support Request'
+              },
+            );
+            if (await canLaunchUrl(emailLaunchUri)) {
+              await launchUrl(emailLaunchUri);
+            }
           },
         ),
       ],
@@ -163,7 +174,7 @@ class _ContactChannelsState extends State<ContactChannels> {
     );
   }
 
-  void _showCallbackDialog(BuildContext context) {
+  void showCallWorkflow(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -230,7 +241,13 @@ class _ContactChannelsState extends State<ContactChannels> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () async {
+                            final Uri telUri = Uri(scheme: 'tel', path: '+254721735254');
+                            if (await canLaunchUrl(telUri)) {
+                              await launchUrl(telUri);
+                            }
+                            if (context.mounted) Navigator.pop(context);
+                          },
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: colorScheme.primary),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

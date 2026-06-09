@@ -51,6 +51,13 @@ dependencies:
   flutter_animate: ^4.5.2
   google_fonts: ^8.1.0
   crypto: ^3.0.3
+  url_launcher: ^6.3.2
+  image_picker: ^1.2.2
+  qr_flutter: ^4.1.0
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.3
+  share_plus: ^13.1.0
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +77,8 @@ flutter:
 
   assets:
     - .env
+    - assets/
+    - assets/logos/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
