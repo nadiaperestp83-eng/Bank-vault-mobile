@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
+import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_state.dart';
+import 'package:vault_os/src/utils/currency_formatter.dart';
+import '../../../models/vault_models.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(LoadDashboardData());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,67 +34,151 @@ class DashboardScreen extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Aurora Glows for Dark Mode
-          if (isDark) ...[
-            Positioned(
-              top: -100,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.darkPrimary.withValues(alpha: 0.08),
-                      AppColors.darkPrimary.withValues(alpha: 0),
-                    ],
+      body: BlocConsumer<DashboardBloc, DashboardState>(
+        listener: (context, state) {
+          if (state is DashboardLoaded) {
+            // Module 1: Auth Guard Logic
+            if (!state.user.hasPin) {
+              // Redirect to PIN setup if pin_hash is null
+              // context.go('/setup-pin'); 
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please set up your Transaction PIN to continue.')),
+              );
+            }
+          }
+          if (state is DashboardError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is DashboardLoading || state is DashboardInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is DashboardLoaded) {
+            return Stack(
+              children: [
+                if (isDark) _buildAuroraGlows(),
+                SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 72),
+                        
+                        // Module 4: High-priority Warning Banner
+                        ...state.notifications
+                            .where((n) => n.type == 'warning')
+                            .map((n) => _buildWarningBanner(context, n)),
+
+                        _buildAIInsightWidget(context, state.latestInsight)
+                            .animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Module 2: Portfolio Summary
+                        _buildPortfolioSummaryCard(context, state)
+                            .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        _buildCoreAccountCard(context, state.wallet, state.user.primaryCurrency)
+                            .animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Module 2: Growth Chart
+                        _buildGrowthChart(context, state.growthData)
+                            .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Module 5: Quick Send
+                        _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
+                            .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Module 3: Transactions
+                        _buildRecentTransactions(context, state.transactions)
+                            .animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 120),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              bottom: -150,
-              right: -100,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.darkPrimary.withValues(alpha: 0.05),
-                      AppColors.darkPrimary.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-          
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 72), // Space for VaultTopNav (64px + 8px margin)
-                  _buildAIInsightWidget(context).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 24),
-                  _buildPortfolioSummaryCard(context).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 24),
-                  _buildCoreAccountCard(context).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 24),
-                  _buildGrowthChart(context).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 24),
-                  _buildQuickSend(context).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 24),
-                  _buildRecentTransactions(context).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
-                  const SizedBox(height: 120), // Space for bottom dock
+              ],
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildAuroraGlows() {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.darkPrimary.withOpacity(0.08),
+                  AppColors.darkPrimary.withOpacity(0),
                 ],
               ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -150,
+          right: -100,
+          child: Container(
+            width: 500,
+            height: 500,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.darkPrimary.withOpacity(0.05),
+                  AppColors.darkPrimary.withOpacity(0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWarningBanner(BuildContext context, VaultNotification notification) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.alertTriangle, color: Colors.red, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              notification.message,
+              style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -83,7 +186,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAIInsightWidget(BuildContext context) {
+  Widget _buildAIInsightWidget(BuildContext context, String? insight) {
     final theme = Theme.of(context);
     return GlassCard(
       padding: const EdgeInsets.all(AppSizes.p20),
@@ -104,7 +207,7 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'You spent 15% less on dining this week compared to last. That’s enough to cover your Netflix subscription!',
+            insight ?? 'Analyzing your financial patterns... Check back soon for pro-active tips!',
             style: theme.textTheme.bodyMedium?.copyWith(
               height: 1.5,
             ),
@@ -114,9 +217,21 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPortfolioSummaryCard(BuildContext context) {
+  Widget _buildPortfolioSummaryCard(BuildContext context, DashboardLoaded state) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    
+    // Module 2: Dual Currency Display
+    final primaryBalance = CurrencyFormatter.format(state.wallet.balance, state.wallet.currency);
+    final secondaryCurrency = state.wallet.currency == 'USD' ? 'KES' : 'USD';
+    final rate = state.currencyRates[secondaryCurrency] ?? 130.0;
+    final secondaryBalance = CurrencyFormatter.format(
+      CurrencyFormatter.convert(state.wallet.balance, state.wallet.currency, secondaryCurrency, rate: rate),
+      secondaryCurrency,
+    );
+
+    final growth = (state.growthData['growth'] as num?)?.toDouble() ?? 0.0;
+    final trend = (state.growthData['trend'] as String?) ?? 'neutral';
 
     return Container(
       width: double.infinity,
@@ -125,7 +240,7 @@ class DashboardScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             theme.colorScheme.primary,
-            theme.colorScheme.primary.withValues(alpha: isDark ? 0.7 : 0.8),
+            theme.colorScheme.primary.withOpacity(isDark ? 0.7 : 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -133,7 +248,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+            color: theme.colorScheme.primary.withOpacity(0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -145,17 +260,25 @@ class DashboardScreen extends StatelessWidget {
           Text(
             'TOTAL PORTFOLIO BALANCE',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: Colors.white.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'KES 428,500.00',
-            style: TextStyle(
+          Text(
+            primaryBalance,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
+            ),
+          ),
+          Text(
+            '≈ $secondaryBalance',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 24),
@@ -164,16 +287,20 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(LucideIcons.trendingUp, color: Colors.white, size: 14),
-                    SizedBox(width: 6),
+                    Icon(
+                      trend == 'positive' ? LucideIcons.trendingUp : (trend == 'negative' ? LucideIcons.trendingDown : LucideIcons.minus),
+                      color: Colors.white, 
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
                     Text(
-                      '+5.25%',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      '${growth.toStringAsFixed(2)}%',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -187,7 +314,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCoreAccountCard(BuildContext context) {
+  Widget _buildCoreAccountCard(BuildContext context, Wallet wallet, String primaryCurrency) {
     final theme = Theme.of(context);
     return GlassCard(
       child: Column(
@@ -202,7 +329,7 @@ class DashboardScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'KES 12,450.00',
+                CurrencyFormatter.format(wallet.balance, wallet.currency),
                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Icon(LucideIcons.wallet, size: 20),
@@ -213,19 +340,17 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => context.go('/transact'),
                   child: const Text('Send'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
-                  style: theme.elevatedButtonTheme.style?.copyWith(
-                    backgroundColor: WidgetStateProperty.all(
-                      theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                    ),
-                    foregroundColor: WidgetStateProperty.all(theme.textTheme.bodyLarge?.color),
+                  onPressed: () => context.go('/transact'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.onSurface.withOpacity(0.05),
+                    foregroundColor: theme.textTheme.bodyLarge?.color,
                   ),
                   child: const Text('Deposit'),
                 ),
@@ -237,9 +362,16 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGrowthChart(BuildContext context) {
+  Widget _buildGrowthChart(BuildContext context, Map<String, dynamic> growthData) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
+    final List<double> history = List<double>.from(growthData['history'] ?? []);
+
+    if (history.isEmpty) return const SizedBox.shrink();
+
+    final spots = history.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), e.value);
+    }).toList();
 
     return GlassCard(
       child: Column(
@@ -265,15 +397,7 @@ class DashboardScreen extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 3),
-                      FlSpot(2.6, 2),
-                      FlSpot(4.9, 5),
-                      FlSpot(6.8, 3.1),
-                      FlSpot(8, 4),
-                      FlSpot(9.5, 3),
-                      FlSpot(11, 4),
-                    ],
+                    spots: spots,
                     isCurved: true,
                     color: primaryColor,
                     barWidth: 3,
@@ -283,8 +407,8 @@ class DashboardScreen extends StatelessWidget {
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          primaryColor.withValues(alpha: 0.3),
-                          primaryColor.withValues(alpha: 0.0),
+                          primaryColor.withOpacity(0.3),
+                          primaryColor.withOpacity(0.0),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -295,40 +419,14 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMinMaxLabel(context, 'Low', 'KES 380,000'),
-              _buildMinMaxLabel(context, 'High', 'KES 428,500'),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildMinMaxLabel(BuildContext context, String label, String amount) {
+  Widget _buildQuickSend(BuildContext context, List<VaultUser> frequent, List<VaultUser> suggested) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: label == 'Low' ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-      children: [
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(fontSize: 8)),
-        Text(amount, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildQuickSend(BuildContext context) {
-    final theme = Theme.of(context);
-    final List<Map<String, String>> contacts = [
-      {'name': 'Add', 'type': 'action'},
-      {'name': 'Nevy', 'initials': 'NV'},
-      {'name': 'Sarah', 'initials': 'SR'},
-      {'name': 'James', 'initials': 'JM'},
-      {'name': 'Elena', 'initials': 'EL'},
-    ];
-
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -339,52 +437,69 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(height: 16),
         SizedBox(
           height: 90,
-          child: ListView.separated(
+          child: ListView(
             scrollDirection: Axis.horizontal,
-            itemCount: contacts.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 20),
-            itemBuilder: (context, index) {
-              final contact = contacts[index];
-              if (contact['type'] == 'action') {
-                return Column(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
-                      ),
-                      child: Icon(LucideIcons.plus, color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('New', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                  ],
-                );
-              }
-              return Column(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      contact['initials']!,
-                      style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(contact['name']!, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                ],
-              );
-            },
+            children: [
+              _buildAddAction(context),
+              const SizedBox(width: 20),
+              ...frequent.map((user) => Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: _buildContactAvatar(context, user, isFrequent: true),
+              )),
+              ...suggested.map((user) => Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: _buildContactAvatar(context, user),
+              )),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRecentTransactions(BuildContext context) {
+  Widget _buildAddAction(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
+          ),
+          child: Icon(LucideIcons.plus, color: theme.colorScheme.primary),
+        ),
+        const SizedBox(height: 8),
+        Text('New', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildContactAvatar(BuildContext context, VaultUser user, {bool isFrequent = false}) {
+    final theme = Theme.of(context);
+    final initials = ((user.firstName?.isNotEmpty ?? false) ? user.firstName![0] : '') + 
+                     ((user.lastName?.isNotEmpty ?? false) ? user.lastName![0] : '');
+    
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: isFrequent ? theme.colorScheme.primary.withOpacity(0.2) : theme.colorScheme.primary.withOpacity(0.1),
+          backgroundImage: user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) : null,
+          child: user.profilePhotoUrl == null ? Text(
+            initials,
+            style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+          ) : null,
+        ),
+        const SizedBox(height: 8),
+        Text(user.firstName ?? 'User', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildRecentTransactions(BuildContext context, List<VaultTransaction> transactions) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,75 +509,124 @@ class DashboardScreen extends StatelessWidget {
           style: theme.textTheme.labelSmall,
         ),
         const SizedBox(height: 16),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            final transactions = [
-              {
-                'title': 'Received from Nevy',
-                'time': '2 mins ago',
-                'amount': '+ KES 5,000',
-                'isPositive': true,
-              },
-              {
-                'title': 'Stripe Subscription',
-                'time': '2 hours ago',
-                'amount': '- KES 1,500',
-                'isPositive': false,
-              },
-              {
-                'title': 'M-Pesa Deposit',
-                'time': 'Yesterday',
-                'amount': '+ KES 10,000',
-                'isPositive': true,
-              },
-            ];
-            final tx = transactions[index];
-            final isPositive = tx['isPositive'] as bool;
-
-            return GlassCard(
-              padding: const EdgeInsets.all(AppSizes.p16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: (isPositive ? Colors.green : Colors.red).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+        if (transactions.isEmpty)
+          const GlassCard(child: Center(child: Text('No recent transactions.')))
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: transactions.length > 5 ? 5 : transactions.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final tx = transactions[index];
+              final isPositive = tx.type == 'deposit' || (tx.type == 'transfer' && tx.receiverId == Supabase.instance.client.auth.currentUser?.id);
+              
+              return GlassCard(
+                padding: const EdgeInsets.all(AppSizes.p16),
+                child: Row(
+                  children: [
+                    _buildTransactionIcon(tx, isPositive),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_getTransactionTitle(tx), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(_formatTimestamp(tx.createdAt), style: theme.textTheme.labelSmall?.copyWith(fontSize: 8, letterSpacing: 0)),
+                        ],
+                      ),
                     ),
-                    child: Icon(
-                      isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight,
-                      color: isPositive ? Colors.green : Colors.red,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(tx['title'] as String, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        Text(tx['time'] as String, style: theme.textTheme.labelSmall?.copyWith(fontSize: 8, letterSpacing: 0)),
+                        Text(
+                          '${isPositive ? '+' : '-'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isPositive ? Colors.green : Colors.red,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (tx.recordedBalance != null)
+                          Text(
+                            'Bal: ${CurrencyFormatter.format(tx.recordedBalance!, tx.currency)}',
+                            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                          ),
                       ],
                     ),
-                  ),
-                  Text(
-                    tx['amount'] as String,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isPositive ? Colors.green : Colors.red,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                  ],
+                ),
+              );
+            },
+          ),
       ],
     );
+  }
+
+  Widget _buildTransactionIcon(VaultTransaction tx, bool isPositive) {
+    IconData icon;
+    Color color;
+    String? logoPath;
+
+    final method = tx.method?.toLowerCase() ?? '';
+    final description = tx.description?.toLowerCase() ?? '';
+
+    if (method.contains('mpesa') || description.contains('mpesa')) {
+      logoPath = 'assets/logos/mpesa.png';
+    } else if (method.contains('kcb') || description.contains('kcb')) {
+      logoPath = 'assets/logos/kcb.png';
+    } else if (method.contains('stripe') || description.contains('stripe')) {
+      logoPath = 'assets/logos/stripe.png';
+    }
+
+    if (tx.type == 'deposit') {
+      icon = LucideIcons.arrowDownLeft;
+      color = Colors.green;
+    } else if (tx.type == 'withdrawal') {
+      icon = LucideIcons.arrowUpRight;
+      color = Colors.red;
+    } else {
+      icon = isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight;
+      color = isPositive ? Colors.green : Colors.blue;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: logoPath != null 
+        ? Image.asset(
+            logoPath, 
+            width: 18, 
+            height: 18, 
+            errorBuilder: (c, e, s) => Icon(icon, color: color, size: 18),
+          )
+        : Icon(icon, color: color, size: 18),
+    );
+  }
+
+  String _getTransactionTitle(VaultTransaction tx) {
+    if (tx.type == 'deposit') return 'Deposit via ${tx.method?.toUpperCase() ?? "Bank"}';
+    if (tx.type == 'withdrawal') return 'Withdrawal';
+    if (tx.type == 'transfer') {
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      if (tx.senderId == currentUserId) {
+        return 'Sent to ${tx.receiverProfile?.firstName ?? "User"}';
+      } else {
+        return 'Received from ${tx.senderProfile?.firstName ?? "User"}';
+      }
+    }
+    return 'Transaction';
+  }
+
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
+    if (diff.inHours < 24) return '${diff.inHours} hours ago';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }

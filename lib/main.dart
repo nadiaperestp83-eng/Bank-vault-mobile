@@ -11,6 +11,10 @@ import 'package:vault_os/src/services/auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vault_os/src/utils/theme_provider.dart';
 
+import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
+import 'package:vault_os/src/services/dashboard_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -25,6 +29,7 @@ void main() async {
   await Stripe.instance.applySettings();
 
   final authService = AuthService();
+  final dashboardService = DashboardService();
 
   runApp(
     ProviderScope(
@@ -34,6 +39,11 @@ void main() async {
             create: (context) => AuthBloc(
               authService: authService,
             )..add(AppStarted()),
+          ),
+          BlocProvider(
+            create: (context) => DashboardBloc(
+              dashboardService: dashboardService,
+            ),
           ),
         ],
         child: const VaultOSApp(),
