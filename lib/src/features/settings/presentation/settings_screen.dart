@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
+import 'package:vault_os/src/features/settings/providers.dart';
 import 'widgets/profile_section.dart';
 import 'widgets/business_profile_section.dart';
 import 'widgets/security_center_section.dart';
-import 'widgets/activity_log_section.dart';
+import 'widgets/recent_activity_section.dart';
+import 'widgets/notifications_section.dart';
+import 'widgets/system_section.dart';
 import 'widgets/danger_zone_section.dart';
+import 'widgets/activity_log_drawer.dart';
 
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final profileAsync = ref.watch(profileStreamProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.backgroundLight,
@@ -42,16 +48,47 @@ class SettingsScreen extends StatelessWidget {
                     color: isDark ? Colors.white : AppColors.textPrimaryLight,
                   ),
                 ),
+                const SizedBox(width: AppSizes.p8),
+                profileAsync.when(
+                  data: (profile) => Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primary, width: 1.5),
+                      image: DecorationImage(
+                        image: profile?.profilePhotoUrl != null
+                            ? NetworkImage(profile!.profilePhotoUrl!)
+                            : const NetworkImage('https://i.pravatar.cc/300'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  loading: () => const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (_, __) => const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.grey,
+                    child: Icon(LucideIcons.user, size: 18, color: Colors.white),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppSizes.p24),
             const ProfileSection(),
             const SizedBox(height: AppSizes.p32),
-            const BusinessProfileSection(),
+            const SystemSection(),
             const SizedBox(height: AppSizes.p32),
             const SecurityCenterSection(),
             const SizedBox(height: AppSizes.p32),
-            const ActivityLogSection(),
+            const RecentActivitySection(),
+            const SizedBox(height: AppSizes.p32),
+            const BusinessProfileSection(),
+            const SizedBox(height: AppSizes.p32),
+            const NotificationsSection(),
             const SizedBox(height: AppSizes.p32),
             const DangerZoneSection(),
             const SizedBox(height: AppSizes.p32),
