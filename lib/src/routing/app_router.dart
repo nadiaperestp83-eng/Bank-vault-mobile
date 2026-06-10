@@ -14,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
 import 'package:vault_os/src/features/auth/presentation/login_screen.dart';
 import 'package:vault_os/src/features/auth/presentation/signup_screen.dart';
+import 'package:vault_os/src/features/help/presentation/ai_advisor_screen.dart';
+import 'package:vault_os/src/features/help/presentation/widgets/floating_advisor.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -52,7 +54,12 @@ class _MainShellState extends ConsumerState<MainShell> {
     return Scaffold(
       appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
-      body: widget.child,
+      body: Stack(
+        children: [
+          widget.child,
+          const FloatingAdvisor(),
+        ],
+      ),
       floatingActionButton: Container(
         height: 64,
         width: 64,
@@ -183,6 +190,10 @@ final router = GoRouter(
         GoRoute(
           path: '/help',
           builder: (context, state) => const HelpScreen(),
+        ),
+        GoRoute(
+          path: '/ai-advisor',
+          builder: (context, state) => const AiAdvisorScreen(),
         ),
       ],
     ),

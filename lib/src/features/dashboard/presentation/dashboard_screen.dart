@@ -12,6 +12,7 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_state.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
+import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import '../../../models/vault_models.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -35,6 +36,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       body: BlocConsumer<DashboardBloc, DashboardState>(
+        listenWhen: (previous, current) {
+          if (previous is DashboardLoaded && current is DashboardLoaded) {
+            return current.receipts.length > previous.receipts.length;
+          }
+          return false;
+        },
         listener: (context, state) {
           if (state is DashboardLoaded) {
             // Module 1: Auth Guard Logic
@@ -43,6 +50,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // context.go('/setup-pin'); 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Please set up your Transaction PIN to continue.')),
+              );
+            }
+
+            // Real-time Receipt Notification
+            if (state.receipts.isNotEmpty) {
+              final latestReceipt = state.receipts.first;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('New Receipt Available: ${latestReceipt.receiptNumber} for ${latestReceipt.currency} ${latestReceipt.amount}'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'View',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Show receipt detail dialog
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          backgroundColor: Colors.transparent,
+                          child: DigitalReceipt(receipt: latestReceipt),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               );
             }
           }
@@ -69,6 +102,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         const SizedBox(height: 72),
                         
+                        _buildGreeting(context, state.user),
+                        const SizedBox(height: 24),
+
                         // Module 4: High-priority Warning Banner
                         ...state.notifications
                             .where((n) => n.type == 'warning')
@@ -628,5 +664,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (diff.inHours < 24) return '${diff.inHours} hours ago';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  Widget _buildGreeting(BuildContext context, VaultUser user) {
+    final theme = Theme.of(context);
+    final hour = DateTime.now().hour;
+    String greeting;
+    String emoji;
+
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      emoji = '🌅';
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      emoji = '☀️';
+    } else {
+      greeting = 'Good Evening';
+      emoji = '🌙';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$greeting, $emoji',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 12,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          user.firstName ?? 'Vault User',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
   }
 }

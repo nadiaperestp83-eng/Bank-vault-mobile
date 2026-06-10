@@ -6,6 +6,7 @@ import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:vault_os/src/features/settings/providers.dart';
 import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/profile_model.dart';
+import 'package:vault_os/src/utils/theme_provider.dart';
 
 class SystemSection extends ConsumerWidget {
   const SystemSection({super.key});
@@ -42,6 +43,14 @@ class SystemSection extends ConsumerWidget {
 
   Widget _buildSystem(BuildContext context, WidgetRef ref, UserPreferences prefs, Profile? profile) {
     final settingsService = ref.read(settingsServiceProvider);
+    final currentThemeMode = ref.watch(themeProvider);
+
+    String themeLabel = 'System';
+    switch (currentThemeMode) {
+      case ThemeMode.light: themeLabel = 'Light'; break;
+      case ThemeMode.dark: themeLabel = 'Dark'; break;
+      case ThemeMode.system: themeLabel = 'System'; break;
+    }
 
     return GlassCard(
       child: Column(
@@ -50,8 +59,17 @@ class SystemSection extends ConsumerWidget {
           _buildDropdown(context, 'Primary Currency', profile?.primaryCurrency ?? 'KES', ['USD', 'KES', 'EUR', 'GBP'], 
             (v) => settingsService.updateCurrency(prefs.userId, v!)),
           const SizedBox(height: AppSizes.p12),
-          _buildDropdown(context, 'App Theme', prefs.theme.substring(0, 1).toUpperCase() + prefs.theme.substring(1), ['Light', 'Dark', 'System'], 
-            (v) => settingsService.updateTheme(prefs.userId, v!.toLowerCase())),
+          _buildDropdown(context, 'App Theme', themeLabel, ['Light', 'Dark', 'System'], 
+            (v) {
+              ThemeMode mode;
+              switch (v) {
+                case 'Light': mode = ThemeMode.light; break;
+                case 'Dark': mode = ThemeMode.dark; break;
+                default: mode = ThemeMode.system;
+              }
+              ref.read(themeProvider.notifier).setThemeMode(mode);
+              settingsService.updateTheme(prefs.userId, v!.toLowerCase());
+            }),
           const SizedBox(height: AppSizes.p12),
           _buildDropdown(context, 'Language', prefs.language, ['en', 'sw', 'fr'], 
             (v) => settingsService.updateLanguage(prefs.userId, v!)),

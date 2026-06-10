@@ -6,27 +6,40 @@ import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, VaultAuthState> {
   final AuthService _authService;
+AuthBloc({required AuthService authService})
+    : _authService = authService,
+      super(VaultAuthInitial()) {
+  on<AppStarted>(_onAppStarted);
+  on<SendOtpRequested>(_onSendOtpRequested);
+  on<VerifyOtpRequested>(_onVerifyOtpRequested);
+  on<LoggedIn>(_onLoggedIn);
+  on<LoggedOut>(_onLoggedOut);
+  on<UnlockWithBiometricsRequested>(_onUnlockWithBiometricsRequested);
+}
 
-  AuthBloc({required this._authService})
-      : super(VaultAuthInitial()) {
-    on<AppStarted>(_onAppStarted);
-    on<SendOtpRequested>(_onSendOtpRequested);
-    on<VerifyOtpRequested>(_onVerifyOtpRequested);
-    on<LoggedIn>(_onLoggedIn);
-    on<LoggedOut>(_onLoggedOut);
+Future<void> _onAppStarted(AppStarted event, Emitter<VaultAuthState> emit) async {
+  final session = _authService.currentSession;
+  if (session != null) {
+    final userId = session.user.id;
+    // Emit VaultLocked instead of VaultAuthenticated to force biometric/PIN check
+    emit(VaultLocked(userId));
+  } else {
+    emit(VaultUnauthenticated());
   }
+}
 
-  Future<void> _onAppStarted(AppStarted event, Emitter<VaultAuthState> emit) async {
-    final session = _authService.currentSession;
-    if (session != null) {
-      final userId = session.user.id;
-      final hasProfile = await _authService.checkProfileExists(userId);
-      final hasPin = hasProfile ? await _authService.hasTransactionPin(userId) : false;
-      emit(VaultAuthenticated(userId, hasProfile: hasProfile, hasPin: hasPin));
-    } else {
-      emit(VaultUnauthenticated());
-    }
+Future<void> _onUnlockWithBiometricsRequested(UnlockWithBiometricsRequested event, Emitter<VaultAuthState> emit) async {
+  emit(VaultAuthLoading());
+  try {
+    final userId = event.userId;
+    final hasProfile = await _authService.checkProfileExists(userId);
+    final hasPin = hasProfile ? await _authService.hasTransactionPin(userId) : false;
+    emit(VaultAuthenticated(userId, hasProfile: hasProfile, hasPin: hasPin));
+  } catch (e) {
+    emit(VaultAuthError(e.toString()));
   }
+}
+
 
   Future<void> _onSendOtpRequested(SendOtpRequested event, Emitter<VaultAuthState> emit) async {
     if (state is VaultAuthLoading) return;

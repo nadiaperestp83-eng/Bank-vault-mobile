@@ -78,6 +78,30 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _handleInitialBiometricUnlock(String userId) async {
+    final credentials = await _storageService.getCredentials();
+    final savedEmail = credentials['email'];
+    final savedPin = credentials['pin'];
+
+    // If no credentials saved, we can't auto-unlock even with biometrics
+    if (savedEmail == null || savedPin == null) {
+      return;
+    }
+
+    final authenticated = await _biometricService.authenticate(
+      reason: 'Unlock your vault',
+    );
+
+    if (authenticated && mounted) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _emailController.text = savedEmail;
+        _pinController.text = savedPin;
+      });
+      context.read<AuthBloc>().add(UnlockWithBiometricsRequested(userId));
+    }
+  }
+
   Future<void> _handleBiometricAuth() async {
     final credentials = await _storageService.getCredentials();
     final savedEmail = credentials['email'];
@@ -152,6 +176,10 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() => _isLoading = true);
         } else {
           setState(() => _isLoading = false);
+        }
+
+        if (state is VaultLocked) {
+          _handleInitialBiometricUnlock(state.userId);
         }
 
         if (state is VaultOtpSent) {

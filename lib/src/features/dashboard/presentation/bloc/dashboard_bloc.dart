@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../services/dashboard_service.dart';
 import '../../../../models/vault_models.dart';
+import '../../../../models/receipt_model.dart';
 import 'dashboard_event.dart';
 import 'dashboard_state.dart';
 
@@ -9,6 +10,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final DashboardService _dashboardService;
   StreamSubscription<Wallet>? _walletSubscription;
   StreamSubscription<List<VaultNotification>>? _notificationSubscription;
+  StreamSubscription<List<VaultReceipt>>? _receiptSubscription;
 
   DashboardBloc({required DashboardService dashboardService})
       : _dashboardService = dashboardService,
@@ -16,6 +18,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<LoadDashboardData>(_onLoadDashboardData);
     on<UpdateWallet>(_onUpdateWallet);
     on<UpdateNotifications>(_onUpdateNotifications);
+    on<UpdateReceipts>(_onUpdateReceipts);
   }
 
   Future<void> _onLoadDashboardData(
@@ -34,6 +37,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       // Fetch initial data for immediate emission
       final initialWallet = await _dashboardService.getWalletStream().first;
       final initialNotifications = await _dashboardService.getNotificationStream().first;
+      final initialReceipts = await _dashboardService.getReceiptsStream().first;
 
       emit(DashboardLoaded(
         user: user,
@@ -41,6 +45,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         transactions: transactions,
         growthData: growthData,
         notifications: initialNotifications,
+        receipts: initialReceipts,
         frequentContacts: frequentContacts,
         suggestedUsers: suggestedUsers,
         latestInsight: latestInsight,
@@ -57,6 +62,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       _notificationSubscription = _dashboardService.getNotificationStream().listen(
         (notifications) => add(UpdateNotifications(notifications)),
       );
+
+      _receiptSubscription?.cancel();
+      _receiptSubscription = _dashboardService.getReceiptsStream().listen(
+        (receipts) => add(UpdateReceipts(receipts)),
+      );
     } catch (e) {
       emit(DashboardError(e.toString()));
     }
@@ -71,14 +81,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         transactions: currentState.transactions,
         growthData: currentState.growthData,
         notifications: currentState.notifications,
+        receipts: currentState.receipts,
         frequentContacts: currentState.frequentContacts,
         suggestedUsers: currentState.suggestedUsers,
         latestInsight: currentState.latestInsight,
         currencyRates: currentState.currencyRates,
       ));
-    } else if (state is DashboardLoading || state is DashboardInitial) {
-      // Handle the case where wallet comes before other data is fully loaded
-      // In a real app, you'd probably use RxDart to combine these streams
     }
   }
 
@@ -92,6 +100,25 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         transactions: currentState.transactions,
         growthData: currentState.growthData,
         notifications: event.notifications,
+        receipts: currentState.receipts,
+        frequentContacts: currentState.frequentContacts,
+        suggestedUsers: currentState.suggestedUsers,
+        latestInsight: currentState.latestInsight,
+        currencyRates: currentState.currencyRates,
+      ));
+    }
+  }
+
+  void _onUpdateReceipts(UpdateReceipts event, Emitter<DashboardState> emit) {
+    if (state is DashboardLoaded) {
+      final currentState = state as DashboardLoaded;
+      emit(DashboardLoaded(
+        user: currentState.user,
+        wallet: currentState.wallet,
+        transactions: currentState.transactions,
+        growthData: currentState.growthData,
+        notifications: currentState.notifications,
+        receipts: event.receipts,
         frequentContacts: currentState.frequentContacts,
         suggestedUsers: currentState.suggestedUsers,
         latestInsight: currentState.latestInsight,
@@ -104,6 +131,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   Future<void> close() {
     _walletSubscription?.cancel();
     _notificationSubscription?.cancel();
+    _receiptSubscription?.cancel();
     return super.close();
   }
 }

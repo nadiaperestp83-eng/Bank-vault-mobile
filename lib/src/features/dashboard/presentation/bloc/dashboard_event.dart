@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../../models/vault_models.dart';
+import '../../../../models/receipt_model.dart';
 
 abstract class DashboardEvent extends Equatable {
   @override
@@ -20,4 +21,11 @@ class UpdateNotifications extends DashboardEvent {
   UpdateNotifications(this.notifications);
   @override
   List<Object?> get props => [notifications];
+}
+
+class UpdateReceipts extends DashboardEvent {
+  final List<VaultReceipt> receipts;
+  UpdateReceipts(this.receipts);
+  @override
+  List<Object?> get props => [receipts];
 }

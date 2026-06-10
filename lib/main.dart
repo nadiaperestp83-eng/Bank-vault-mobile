@@ -15,9 +15,11 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_bloc.dart';
 import 'package:vault_os/src/features/finance/presentation/bloc/savings_bloc.dart';
+import 'package:vault_os/src/features/help/presentation/bloc/ai_advisor_bloc.dart';
 import 'package:vault_os/src/services/dashboard_service.dart';
 import 'package:vault_os/src/services/transaction_service.dart';
 import 'package:vault_os/src/services/savings_service.dart';
+import 'package:vault_os/src/services/ai_advisor_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +38,7 @@ void main() async {
   final dashboardService = DashboardService();
   final transactionService = TransactionService();
   final savingsService = SavingsService();
+  final aiAdvisorService = AiAdvisorService();
 
   runApp(
     ProviderScope(
@@ -59,6 +62,11 @@ void main() async {
           BlocProvider(
             create: (context) => SavingsBloc(
               savingsService: savingsService,
+            ),
+          ),
+          BlocProvider(
+            create: (context) => AiAdvisorBloc(
+              aiAdvisorService: aiAdvisorService,
             ),
           ),
         ],
