@@ -75,7 +75,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
 
       emit(TransactionInProgress('Processing transfer...'));
       await transactionService.vaultTransfer(
-        receiverTag: event.receiverTag,
+        recipientTag: event.recipientTag,
         amount: event.amount,
         currency: event.currency,
         description: event.description,

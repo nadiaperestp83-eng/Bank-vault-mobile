@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -68,7 +69,7 @@ class _TransactScreenState extends State<TransactScreen> {
       if (_activeTab == 0) {
         if (_selectedRecipient == null) return;
         context.read<TransactionBloc>().add(PerformVaultTransfer(
-          receiverTag: _selectedRecipient!.kycTag!,
+          recipientTag: _selectedRecipient!.kycTag!,
           amount: amount,
           currency: _selectedCurrency,
           pin: pin,
@@ -224,7 +225,10 @@ class _TransactScreenState extends State<TransactScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildProviderCard(LucideIcons.user, 'Vault User', true),
+                GestureDetector(
+                  onTap: () => context.go('/transact/p2p'),
+                  child: _buildProviderCard(LucideIcons.user, 'Vault User', true),
+                ),
                 const SizedBox(width: 12),
                 _buildProviderCard(LucideIcons.landmark, 'Bank', false),
                 const SizedBox(width: 12),

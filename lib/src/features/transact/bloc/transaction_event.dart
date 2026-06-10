@@ -16,14 +16,14 @@ class SearchRecipients extends TransactionEvent {
 }
 
 class PerformVaultTransfer extends TransactionEvent {
-  final String receiverTag;
+  final String recipientTag;
   final double amount;
   final String currency;
   final String? description;
   final String pin;
 
   PerformVaultTransfer({
-    required this.receiverTag,
+    required this.recipientTag,
     required this.amount,
     required this.currency,
     this.description,
@@ -31,7 +31,7 @@ class PerformVaultTransfer extends TransactionEvent {
   });
 
   @override
-  List<Object?> get props => [receiverTag, amount, currency, description, pin];
+  List<Object?> get props => [recipientTag, amount, currency, description, pin];
 }
 
 class PerformMpesaDeposit extends TransactionEvent {

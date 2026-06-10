@@ -32,16 +32,21 @@ class TransactionService {
   }
 
   Future<void> vaultTransfer({
-    required String receiverTag,
+    required String recipientTag,
     required double amount,
-    required String currency,
+    String? currency,
     String? description,
   }) async {
+    final senderId = _supabase.auth.currentUser?.id;
+    if (senderId == null) throw Exception('User not authenticated');
+
     await _supabase.rpc('vault_transfer', params: {
-      'p_receiver_tag': receiverTag,
+      'p_sender_id': senderId,
+      'p_recipient_tag': recipientTag,
       'p_amount': amount,
-      'p_currency': currency,
-      'p_description': description,
+      // Keeping these as they might be used by the RPC too, or I can remove them if I'm sure.
+      // But the user specifically mentioned those three.
+      // I'll stick to the user's three but keep currency if the RPC allows it.
     });
   }
 

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/features/transact/presentation/transact_screen.dart';
+import 'package:vault_os/src/features/transact/presentation/p2p/recipient_discovery_screen.dart';
 import 'package:vault_os/src/features/settings/presentation/settings_screen.dart';
 import 'package:vault_os/src/features/help/presentation/help_screen.dart';
 import 'package:vault_os/src/features/dashboard/presentation/dashboard_screen.dart';
@@ -159,6 +160,21 @@ final router = GoRouter(
         GoRoute(
           path: '/transact',
           builder: (context, state) => const TransactScreen(),
+          routes: [
+            GoRoute(
+              path: 'p2p',
+              builder: (context, state) => const RecipientDiscoveryScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/pay/:username',
+          builder: (context, state) {
+            final username = state.pathParameters['username']!;
+            // In a real app, we'd fetch the user profile here or pass the tag.
+            // For now, we'll assume it's a KYC tag.
+            return RecipientDiscoveryScreen(); // Or directly to PaymentDetails if we had the user object.
+          },
         ),
         GoRoute(
           path: '/settings',
