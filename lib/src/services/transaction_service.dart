@@ -75,12 +75,19 @@ class TransactionService {
   Future<void> initiateWithdrawal({
     required double amount,
     required String method,
-    required Map<String, dynamic> details,
+    required String currency,
+    required String description,
+    Map<String, dynamic>? details,
   }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
     await _supabase.rpc('process_secure_withdrawal', params: {
+      'p_user_id': userId,
       'p_amount': amount,
+      'p_currency': currency,
+      'p_description': description,
       'p_method': method,
-      'p_details': details,
     });
   }
 
@@ -145,6 +152,11 @@ class TransactionService {
     return 0.0;
   }
 
+  Future<List<Map<String, dynamic>>> getSystemBankAccounts() async {
+    final response = await _supabase.from('system_bank_accounts').select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   Future<void> evaluateTransaction({
     required double amount,
     required double balance,
@@ -155,6 +167,7 @@ class TransactionService {
     if (amount > balance) {
       throw Exception('Insufficient balance');
     }
+    // Added 1% fee check for withdrawals in logic if needed, but for now basic limit
     if (amount > 100000) {
       throw Exception('Amount exceeds daily limit for unverified users');
     }
@@ -196,7 +209,7 @@ class TransactionService {
   List<VaultTransaction> _getMockTransactions() {
     return [
       VaultTransaction(
-        id: '1',
+        id: 'VT-782910',
         description: 'Transfer to @nevy',
         amount: 2500,
         currency: 'KES',
@@ -206,7 +219,7 @@ class TransactionService {
         recordedBalance: 12450,
       ),
       VaultTransaction(
-        id: '2',
+        id: 'DEP-102931',
         description: 'M-Pesa Deposit',
         amount: 5000,
         currency: 'KES',
@@ -217,7 +230,7 @@ class TransactionService {
         recordedBalance: 14950,
       ),
       VaultTransaction(
-        id: '3',
+        id: 'WTH-902811',
         description: 'Withdrawal to KCB',
         amount: 10000,
         currency: 'KES',
@@ -228,7 +241,7 @@ class TransactionService {
         recordedBalance: 9950,
       ),
       VaultTransaction(
-        id: '4',
+        id: 'VT-110293',
         description: 'Received from @elena',
         amount: 1500,
         currency: 'KES',

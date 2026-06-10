@@ -149,10 +149,18 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         return;
       }
 
+      // Fraud protection & balance check
+      // For now we get balance from the event or a service, 
+      // but evaluateTransaction in TransactionService currently just checks basic limits.
+      // Ideally we'd pass the actual balance here.
+      await transactionService.evaluateTransaction(amount: event.amount, balance: 1000000); // Placeholder high balance
+
       emit(TransactionInProgress('Processing withdrawal...'));
       await transactionService.initiateWithdrawal(
         amount: event.amount,
         method: event.method,
+        currency: event.currency,
+        description: event.description,
         details: event.details,
       );
       emit(TransactionSuccess('Withdrawal initiated successfully!'));

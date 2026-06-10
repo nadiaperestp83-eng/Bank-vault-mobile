@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/features/transact/presentation/transact_screen.dart';
 import 'package:vault_os/src/features/transact/presentation/p2p/recipient_discovery_screen.dart';
+import 'package:vault_os/src/features/transact/presentation/withdrawal/withdrawal_setup_screen.dart';
+import 'package:vault_os/src/features/transact/presentation/withdrawal/withdrawal_amount_screen.dart';
 import 'package:vault_os/src/features/settings/presentation/settings_screen.dart';
 import 'package:vault_os/src/features/help/presentation/help_screen.dart';
 import 'package:vault_os/src/features/dashboard/presentation/dashboard_screen.dart';
@@ -164,6 +166,10 @@ final router = GoRouter(
             GoRoute(
               path: 'p2p',
               builder: (context, state) => const RecipientDiscoveryScreen(),
+            ),
+            GoRoute(
+              path: 'withdraw',
+              builder: (context, state) => const WithdrawalAmountScreen(),
             ),
           ],
         ),
