@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
+import '../models/receipt_model.dart';
 
 class DashboardService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -192,9 +193,53 @@ class DashboardService {
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
         .map((data) => data
-            .where((json) => json['is_read'] == false)
             .map((json) => VaultNotification.fromJson(json))
             .toList());
+  }
+
+  Future<void> markAsRead(String notificationId) async {
+    await _supabase
+        .from('notifications')
+        .update({'is_read': true})
+        .eq('id', notificationId);
+  }
+
+  Future<void> markAllAsRead() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await _supabase
+        .from('notifications')
+        .update({'is_read': true})
+        .eq('user_id', userId)
+        .eq('is_read', false);
+  }
+
+  Stream<List<VaultReceipt>> getReceiptsStream() {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    return _supabase
+        .from('receipts')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .map((data) => data
+            .map((json) => VaultReceipt.fromJson(json))
+            .toList());
+  }
+
+  Future<List<VaultReceipt>> getReceipts({int limit = 20, int offset = 0}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final response = await _supabase
+        .from('receipts')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return (response as List).map((json) => VaultReceipt.fromJson(json)).toList();
   }
 
   // Module 5: Social & Quick Actions

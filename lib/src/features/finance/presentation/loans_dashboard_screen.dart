@@ -276,7 +276,11 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => PaymentSourceSelector.show(context, 'Repay Loan'),
+            onPressed: () => PaymentSourceSelector.show(context, 'Repay Loan', (source) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Repayment initiated via $source')),
+              );
+            }),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.1),
               foregroundColor: Colors.white,

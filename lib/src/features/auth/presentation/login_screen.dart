@@ -12,6 +12,8 @@ import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_event.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_state.dart';
+import 'package:vault_os/src/services/biometric_service.dart';
+import 'package:vault_os/src/services/storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,12 +26,36 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isStepTwo = false;
   bool _isLoading = false;
   bool _isPinVisible = false;
+  bool _isBiometricAvailable = false;
+  final _biometricService = BiometricService();
+  final _storageService = StorageService();
   final _emailController = TextEditingController();
   final _pinController = TextEditingController();
   final _otpController = TextEditingController();
 
   int _resendTimer = 60;
   Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+    _loadSavedEmail();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final email = await _storageService.getEmail();
+    if (email != null && mounted) {
+      _emailController.text = email;
+    }
+  }
+
+  Future<void> _checkBiometrics() async {
+    final isAvailable = await _biometricService.isBiometricAvailable();
+    if (mounted) {
+      setState(() => _isBiometricAvailable = isAvailable);
+    }
+  }
 
   void _startTimer() {
     _resendTimer = 60;
@@ -52,14 +78,52 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _handleBiometricAuth() async {
+    final credentials = await _storageService.getCredentials();
+    final savedEmail = credentials['email'];
+    final savedPin = credentials['pin'];
+
+    if (savedEmail == null || savedPin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in manually once to enable biometric login')),
+      );
+      return;
+    }
+
+    final authenticated = await _biometricService.authenticate(
+      reason: 'Authenticate to sign in automatically',
+    );
+
+    if (authenticated) {
+      HapticFeedback.mediumImpact();
+      if (mounted) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _pinController.text = savedPin;
+        });
+        _handleSendCode();
+      }
+    }
+  }
+
   void _handleSendCode() {
     final email = _emailController.text.trim();
+    final pin = _pinController.text.trim();
+    
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your email')),
       );
       return;
     }
+    
+    if (pin.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your 6-digit PIN')),
+      );
+      return;
+    }
+
     HapticFeedback.mediumImpact();
     context.read<AuthBloc>().add(SendOtpRequested(email));
   }
@@ -99,6 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (state is VaultAuthenticated) {
+          _storageService.saveCredentials(_emailController.text.trim(), _pinController.text.trim());
           if (!state.hasProfile) {
             // context.go('/complete-profile');
             context.go('/'); // Defaulting to dashboard for now
@@ -216,11 +281,37 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: AppSizes.p20),
         _buildPinField(context),
         const SizedBox(height: AppSizes.p32),
-        _buildActionButton(
-          context: context,
-          text: _isLoading ? 'Sending code...' : 'Send code',
-          subtitle: _isLoading ? 'Authenticating...' : null,
-          onPressed: _isLoading ? null : _handleSendCode,
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                context: context,
+                text: _isLoading ? 'Sending code...' : 'Send code',
+                subtitle: _isLoading ? 'Authenticating...' : null,
+                onPressed: _isLoading ? null : _handleSendCode,
+              ),
+            ),
+            if (_isBiometricAvailable) ...[
+              const SizedBox(width: AppSizes.p12),
+              GestureDetector(
+                onTap: _isLoading ? null : _handleBiometricAuth,
+                child: Container(
+                  height: 60,
+                  width: 60,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Icon(
+                    LucideIcons.fingerprint,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );

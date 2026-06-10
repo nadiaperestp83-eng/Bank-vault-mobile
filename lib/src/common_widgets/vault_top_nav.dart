@@ -4,11 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/utils/theme_provider.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_state.dart';
+import 'package:vault_os/src/features/settings/providers.dart';
+import 'package:vault_os/src/models/vault_models.dart';
+import 'package:vault_os/src/models/receipt_model.dart';
+import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -50,8 +55,8 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 
                 const Spacer(),
                 
-                // Right Section: Interaction Hub (Always visible)
-                _buildGreeting(context),
+                // Right Section: Interaction Hub
+                _buildGreeting(context, ref),
                 const SizedBox(width: AppSizes.p12),
                 _buildInteractionHub(context, ref),
               ],
@@ -105,9 +110,10 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _buildGreeting(BuildContext context) {
+  Widget _buildGreeting(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final hour = DateTime.now().hour;
+    final profileAsync = ref.watch(profileStreamProvider);
     String greeting;
     String emoji;
 
@@ -137,12 +143,22 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
-            Text(
-              'Stephen',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: theme.colorScheme.onSurface,
+            profileAsync.maybeWhen(
+              data: (profile) => Text(
+                profile?.firstName ?? 'Vault User',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              orElse: () => Text(
+                'Loading...',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
               ),
             ),
           ],
@@ -175,13 +191,13 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           icon: LucideIcons.receiptText,
           onTap: () {
             HapticFeedback.lightImpact();
-            // Show digital receipts logic
+            _showReceiptSheet(context, ref);
           },
         ),
         const SizedBox(width: 10),
-        _buildNotificationButton(context),
+        _buildNotificationButton(context, ref),
         const SizedBox(width: 10),
-        _buildProfileTrigger(context),
+        _buildProfileTrigger(context, ref),
       ],
     );
   }
@@ -224,7 +240,13 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _buildNotificationButton(BuildContext context) {
+  Widget _buildNotificationButton(BuildContext context, WidgetRef ref) {
+    final notificationsAsync = ref.watch(notificationStreamProvider);
+    final unreadCount = notificationsAsync.maybeWhen(
+      data: (logs) => logs.where((l) => !l.isRead).length,
+      orElse: () => 0,
+    );
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -233,70 +255,240 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           icon: LucideIcons.bell,
           onTap: () {
             HapticFeedback.lightImpact();
+            _showNotificationSheet(context, ref);
           },
         ),
-        Positioned(
-          top: -2,
-          right: -2,
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.error,
-              shape: BoxShape.circle,
-            ),
-            constraints: const BoxConstraints(
-              minWidth: 14,
-              minHeight: 14,
-            ),
-            child: const Text(
-              '3',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
+        if (unreadCount > 0)
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.error,
+                shape: BoxShape.circle,
               ),
-            ),
-          ).animate(onPlay: (controller) => controller.repeat())
-           .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 1000.ms, curve: Curves.easeInOut)
-           .then()
-           .scale(begin: const Offset(1.2, 1.2), end: const Offset(1, 1), duration: 1000.ms, curve: Curves.easeInOut),
-        ),
+              constraints: const BoxConstraints(
+                minWidth: 14,
+                minHeight: 14,
+              ),
+              child: Text(
+                '$unreadCount',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ).animate(onPlay: (controller) => controller.repeat())
+             .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 1000.ms, curve: Curves.easeInOut)
+             .then()
+             .scale(begin: const Offset(1.2, 1.2), end: const Offset(1, 1), duration: 1000.ms, curve: Curves.easeInOut),
+          ),
       ],
     );
   }
 
-  Widget _buildProfileTrigger(BuildContext context) {
+  void _showNotificationSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Consumer(
+            builder: (context, ref, _) {
+              final notificationsAsync = ref.watch(notificationStreamProvider);
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSizes.p20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Notifications',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () => ref.read(dashboardServiceProvider).markAllAsRead(),
+                          child: const Text('Mark All as Read'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: notificationsAsync.when(
+                      data: (logs) {
+                        if (logs.isEmpty) {
+                          return const Center(child: Text('No notifications yet'));
+                        }
+                        
+                        // Sort by date descending
+                        final sortedLogs = [...logs]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                        
+                        return ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+                          itemCount: sortedLogs.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final log = sortedLogs[index];
+                            return _buildNotificationItem(context, ref, log);
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem(BuildContext context, WidgetRef ref, VaultNotification log) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final timestamp = DateFormat('MMM dd').format(log.createdAt);
+    
+    Color statusColor;
+    switch (log.type) {
+      case 'success': statusColor = AppColors.success; break;
+      case 'warning': statusColor = AppColors.warning; break;
+      case 'error': statusColor = AppColors.error; break;
+      default: statusColor = AppColors.primary;
+    }
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: () {
+        if (!log.isRead) {
+          ref.read(dashboardServiceProvider).markAsRead(log.id);
+        }
+      },
+      leading: Container(
+        width: 4,
+        height: 40,
+        decoration: BoxDecoration(
+          color: log.isRead ? Colors.transparent : statusColor,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      title: Text(
+        log.title,
+        style: TextStyle(
+          fontWeight: log.isRead ? FontWeight.normal : FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            log.message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            timestamp,
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
+        ],
+      ),
+      trailing: !log.isRead ? Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: statusColor,
+          shape: BoxShape.circle,
+        ),
+      ) : null,
+    );
+  }
+
+  Widget _buildProfileTrigger(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final profileAsync = ref.watch(profileStreamProvider);
 
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
         _showProfileBottomSheet(context);
       },
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2),
-          gradient: LinearGradient(
-            colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'SM',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+      child: profileAsync.when(
+        data: (profile) => Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2),
+            image: DecorationImage(
+              image: profile?.profilePhotoUrl != null
+                  ? NetworkImage(profile!.profilePhotoUrl!)
+                  : const NetworkImage('https://i.pravatar.cc/300'),
+              fit: BoxFit.cover,
             ),
           ),
         ),
+        loading: () => Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2),
+          ),
+          child: const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+        error: (_, __) => Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2),
+            color: theme.colorScheme.primary,
+          ),
+          child: const Icon(LucideIcons.user, size: 18, color: Colors.white),
+        ),
       ),
+    );
+  }
+
+  void _showReceiptSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => const Center(child: Text('Receipt Sheet')),
     );
   }
 
