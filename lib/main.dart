@@ -14,8 +14,10 @@ import 'package:vault_os/src/utils/theme_provider.dart';
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_bloc.dart';
+import 'package:vault_os/src/features/finance/presentation/bloc/savings_bloc.dart';
 import 'package:vault_os/src/services/dashboard_service.dart';
 import 'package:vault_os/src/services/transaction_service.dart';
+import 'package:vault_os/src/services/savings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +35,7 @@ void main() async {
   final authService = AuthService();
   final dashboardService = DashboardService();
   final transactionService = TransactionService();
+  final savingsService = SavingsService();
 
   runApp(
     ProviderScope(
@@ -51,6 +54,11 @@ void main() async {
           BlocProvider(
             create: (context) => TransactionBloc(
               transactionService: transactionService,
+            ),
+          ),
+          BlocProvider(
+            create: (context) => SavingsBloc(
+              savingsService: savingsService,
             ),
           ),
         ],

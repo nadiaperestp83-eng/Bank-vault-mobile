@@ -10,6 +10,7 @@ class VaultUser {
   final String primaryCurrency;
   final String? pinHash;
   final String? country;
+  final bool biometricEnabled;
 
   VaultUser({
     required this.id,
@@ -23,6 +24,7 @@ class VaultUser {
     required this.primaryCurrency,
     this.pinHash,
     this.country,
+    this.biometricEnabled = false,
   });
 
   factory VaultUser.fromJson(Map<String, dynamic> json) {
@@ -33,11 +35,12 @@ class VaultUser {
       email: json['email'] ?? '',
       phoneNumber: json['phone_number'] as String?,
       profilePhotoUrl: json['profile_photo_url'] as String?,
-      kycStatus: json['kyc_status'] as String?,
+      kycStatus: json['kyc_status']?.toString(),
       kycTag: json['kyc_tag'] as String?,
-      primaryCurrency: json['primary_currency'] ?? 'USD',
+      primaryCurrency: json['primary_currency'] ?? 'KES',
       pinHash: json['pin_hash'] as String?,
       country: json['country'] as String?,
+      biometricEnabled: json['biometric_enabled'] == true,
     );
   }
 
@@ -163,12 +166,12 @@ class VaultNotification {
 
   factory VaultNotification.fromJson(Map<String, dynamic> json) {
     return VaultNotification(
-      id: json['id'] ?? '',
-      userId: json['user_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
       title: json['title'] ?? '',
       message: json['message'] ?? '',
       type: json['type'] ?? 'info',
-      isRead: json['is_read'] ?? false,
+      isRead: json['is_read'] == true || json['is_read'] == 1 || json['is_read'] == 'true',
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
@@ -196,6 +199,103 @@ class BalanceHistory {
       balance: (json['recorded_balance'] as num?)?.toDouble() ?? 0.0,
       recordedAt: json['recorded_at'] != null 
           ? DateTime.parse(json['recorded_at']) 
+          : DateTime.now(),
+    );
+  }
+}
+
+class SavingsGoal {
+  final String id;
+  final String userId;
+  final String title;
+  final double targetAmount;
+  final double currentAmount;
+  final DateTime? deadlineDate;
+  final String status; // 'active', 'completed', 'missed'
+  final String? automationFrequency; // 'daily', 'weekly', 'monthly'
+  final double? automationAmount;
+  final bool rewardCredited;
+
+  SavingsGoal({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.targetAmount,
+    required this.currentAmount,
+    this.deadlineDate,
+    required this.status,
+    this.automationFrequency,
+    this.automationAmount,
+    this.rewardCredited = false,
+  });
+
+  factory SavingsGoal.fromJson(Map<String, dynamic> json) {
+    return SavingsGoal(
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? '',
+      title: json['title'] ?? '',
+      targetAmount: (json['target_amount'] as num?)?.toDouble() ?? 0.0,
+      currentAmount: (json['current_amount'] as num?)?.toDouble() ?? 0.0,
+      deadlineDate: json['deadline_date'] != null 
+          ? DateTime.parse(json['deadline_date']) 
+          : null,
+      status: json['status'] ?? 'active',
+      automationFrequency: json['automation_frequency'] as String?,
+      automationAmount: (json['automation_amount'] as num?)?.toDouble(),
+      rewardCredited: json['reward_credited'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'title': title,
+      'target_amount': targetAmount,
+      'current_amount': currentAmount,
+      'deadline_date': deadlineDate?.toIso8601String(),
+      'status': status,
+      'automation_frequency': automationFrequency,
+      'automation_amount': automationAmount,
+      'reward_credited': rewardCredited,
+    };
+  }
+
+  double get progress => targetAmount > 0 ? currentAmount / targetAmount : 0.0;
+  int get daysRemaining => deadlineDate != null ? deadlineDate!.difference(DateTime.now()).inDays : 0;
+}
+
+class SavingsLedgerEntry {
+  final String id;
+  final String goalId;
+  final String userId;
+  final double amount;
+  final String source; // 'M-Pesa', 'Vault', etc.
+  final String type; // 'manual', 'automated'
+  final double runningTotal;
+  final DateTime createdAt;
+
+  SavingsLedgerEntry({
+    required this.id,
+    required this.goalId,
+    required this.userId,
+    required this.amount,
+    required this.source,
+    required this.type,
+    required this.runningTotal,
+    required this.createdAt,
+  });
+
+  factory SavingsLedgerEntry.fromJson(Map<String, dynamic> json) {
+    return SavingsLedgerEntry(
+      id: json['id'] ?? '',
+      goalId: json['goal_id'] ?? '',
+      userId: json['user_id'] ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      source: json['source'] ?? 'Vault',
+      type: json['type'] ?? 'manual',
+      runningTotal: (json['running_total'] as num?)?.toDouble() ?? 0.0,
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
     );
   }

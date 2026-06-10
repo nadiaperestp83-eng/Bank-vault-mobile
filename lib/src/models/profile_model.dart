@@ -8,6 +8,7 @@ class Profile extends Equatable {
   final String kycStatus;
   final String? profilePhotoUrl;
   final String primaryCurrency;
+  final bool biometricEnabled;
 
   const Profile({
     required this.id,
@@ -17,6 +18,7 @@ class Profile extends Equatable {
     required this.kycStatus,
     this.profilePhotoUrl,
     required this.primaryCurrency,
+    this.biometricEnabled = false,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
@@ -25,9 +27,10 @@ class Profile extends Equatable {
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
       kycTag: json['kyc_tag'] as String? ?? '',
-      kycStatus: json['kyc_status'] as String? ?? 'unverified',
+      kycStatus: json['kyc_status']?.toString() ?? 'unverified',
       profilePhotoUrl: json['profile_photo_url'] as String?,
       primaryCurrency: json['primary_currency'] as String? ?? 'KES',
+      biometricEnabled: json['biometric_enabled'] == true,
     );
   }
 
@@ -40,6 +43,7 @@ class Profile extends Equatable {
       'kyc_status': kycStatus,
       'profile_photo_url': profilePhotoUrl,
       'primary_currency': primaryCurrency,
+      'biometric_enabled': biometricEnabled,
     };
   }
 
@@ -50,6 +54,7 @@ class Profile extends Equatable {
     String? kycStatus,
     String? profilePhotoUrl,
     String? primaryCurrency,
+    bool? biometricEnabled,
   }) {
     return Profile(
       id: id,
@@ -59,6 +64,7 @@ class Profile extends Equatable {
       kycStatus: kycStatus ?? this.kycStatus,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       primaryCurrency: primaryCurrency ?? this.primaryCurrency,
+      biometricEnabled: biometricEnabled ?? this.biometricEnabled,
     );
   }
 
@@ -71,5 +77,6 @@ class Profile extends Equatable {
         kycStatus,
         profilePhotoUrl,
         primaryCurrency,
+        biometricEnabled,
       ];
 }

@@ -2,19 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 
-class PaymentSourceSelector extends StatelessWidget {
+class PaymentSourceSelector extends StatefulWidget {
   final String actionTitle;
+  final Function(String source) onSourceSelected;
   
-  const PaymentSourceSelector({super.key, required this.actionTitle});
+  const PaymentSourceSelector({super.key, required this.actionTitle, required this.onSourceSelected});
 
-  static void show(BuildContext context, String actionTitle) {
+  static void show(BuildContext context, String actionTitle, Function(String source) onSourceSelected) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => PaymentSourceSelector(actionTitle: actionTitle),
+      builder: (context) => PaymentSourceSelector(actionTitle: actionTitle, onSourceSelected: onSourceSelected),
     );
   }
+
+  @override
+  State<PaymentSourceSelector> createState() => _PaymentSourceSelectorState();
+}
+
+class _PaymentSourceSelectorState extends State<PaymentSourceSelector> {
+  String _selectedSource = 'Vault Balance';
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +48,7 @@ class PaymentSourceSelector extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            actionTitle,
+            widget.actionTitle,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -52,11 +60,12 @@ class PaymentSourceSelector extends StatelessWidget {
           _buildSourceItem(LucideIcons.smartphone, 'M-Pesa', 'Mobile Money'),
           _buildSourceItem(LucideIcons.building, 'KCB Bank', 'Bank Transfer'),
           _buildSourceItem(LucideIcons.building, 'Equity Bank', 'Bank Transfer'),
-          _buildSourceItem(LucideIcons.creditCard, 'Vault Balance', 'Internal Transfer', isSelected: true),
+          _buildSourceItem(LucideIcons.creditCard, 'Vault Balance', 'Internal Transfer'),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              widget.onSourceSelected(_selectedSource);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Transaction Processed Successfully!'),
@@ -86,41 +95,45 @@ class PaymentSourceSelector extends StatelessWidget {
     );
   }
 
-  Widget _buildSourceItem(IconData icon, String title, String subtitle, {bool isSelected = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05),
-          width: isSelected ? 2 : 1,
+  Widget _buildSourceItem(IconData icon, String title, String subtitle) {
+    bool isSelected = _selectedSource == title;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedSource = title),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05),
+            width: isSelected ? 2 : 1,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight, size: 20),
             ),
-            child: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text(subtitle, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                ],
+              ),
             ),
-          ),
-          if (isSelected)
-            const Icon(LucideIcons.checkCircle, color: AppColors.primary, size: 20),
-        ],
+            if (isSelected)
+              const Icon(LucideIcons.checkCircle, color: AppColors.primary, size: 20),
+          ],
+        ),
       ),
     );
   }

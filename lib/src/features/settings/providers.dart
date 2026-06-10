@@ -3,12 +3,17 @@ import 'package:vault_os/src/models/profile_model.dart';
 import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/merchant_model.dart';
 import 'package:vault_os/src/models/device_model.dart';
+import 'package:vault_os/src/models/vault_models.dart';
+import 'package:vault_os/src/models/receipt_model.dart';
 import 'package:vault_os/src/services/settings_service.dart';
 import 'package:vault_os/src/services/auth_service.dart';
+import 'package:vault_os/src/services/dashboard_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
 final settingsServiceProvider = Provider<SettingsService>((ref) => SettingsService());
+
+final dashboardServiceProvider = Provider<DashboardService>((ref) => DashboardService());
 
 final profileStreamProvider = StreamProvider<Profile?>((ref) {
   final authService = ref.watch(authServiceProvider);
@@ -44,4 +49,14 @@ final devicesStreamProvider = StreamProvider<List<UserDevice>>((ref) {
 
   if (userId == null) return Stream.value([]);
   return settingsService.watchDevices(userId);
+});
+
+final notificationStreamProvider = StreamProvider<List<VaultNotification>>((ref) {
+  final dashboardService = ref.watch(dashboardServiceProvider);
+  return dashboardService.getNotificationStream();
+});
+
+final receiptsStreamProvider = StreamProvider<List<VaultReceipt>>((ref) {
+  final dashboardService = ref.watch(dashboardServiceProvider);
+  return dashboardService.getReceiptsStream();
 });
