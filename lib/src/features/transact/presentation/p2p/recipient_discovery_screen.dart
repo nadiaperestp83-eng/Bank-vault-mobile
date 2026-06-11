@@ -9,6 +9,8 @@ import 'package:vault_os/src/features/transact/bloc/transaction_state.dart';
 import 'package:vault_os/src/models/vault_models.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:flutter/services.dart';
 import 'payment_details_screen.dart';
 
 class RecipientDiscoveryScreen extends StatefulWidget {
@@ -107,47 +109,39 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   }
 
   Widget _buildScanQRCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening Scanner...')));
+      },
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        borderRadius: 24,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(LucideIcons.qrCode, color: AppColors.primary, size: 28),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Scan QR Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Instantly pay any Vault user', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(LucideIcons.chevronRight, color: AppColors.textSecondaryLight),
+          ],
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(LucideIcons.qrCode, color: Colors.white, size: 28),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Scan QR Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('Instantly pay any Vault user', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
-          ),
-          const Icon(LucideIcons.chevronRight, color: Colors.white),
-        ],
-      ),
-    ).animate().fadeIn().slideX(begin: 0.1, end: 0);
+      ).animate().fadeIn().slideX(begin: 0.1, end: 0),
+    );
   }
 
   Widget _buildRecipientList() {
@@ -170,13 +164,9 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
             final user = recipients[index];
             return GestureDetector(
               onTap: () => _onRecipientSelected(user),
-              child: Container(
+              child: GlassCard(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-                ),
+                borderRadius: 20,
                 child: Row(
                   children: [
                     CircleAvatar(

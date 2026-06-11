@@ -67,18 +67,22 @@ class PerformStripeDeposit extends TransactionEvent {
 class PerformWithdrawal extends TransactionEvent {
   final double amount;
   final String method;
+  final String currency;
+  final String description;
   final Map<String, dynamic> details;
   final String pin;
 
   PerformWithdrawal({
     required this.amount,
     required this.method,
+    required this.currency,
+    required this.description,
     required this.details,
     required this.pin,
   });
 
   @override
-  List<Object?> get props => [amount, method, details, pin];
+  List<Object?> get props => [amount, method, currency, description, details, pin];
 }
 
 class TransactionStatusUpdated extends TransactionEvent {

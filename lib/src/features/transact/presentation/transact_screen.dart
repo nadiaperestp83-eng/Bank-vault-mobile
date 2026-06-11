@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
+import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'deposit/deposit_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +56,7 @@ class _TransactScreenState extends State<TransactScreen> {
   }
 
   void _showPinSheet(Function(String) onConfirm) {
+    HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -62,6 +66,7 @@ class _TransactScreenState extends State<TransactScreen> {
   }
 
   void _handleTransaction() {
+    HapticFeedback.lightImpact();
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) return;
 
@@ -85,6 +90,8 @@ class _TransactScreenState extends State<TransactScreen> {
         context.read<TransactionBloc>().add(PerformWithdrawal(
           amount: amount,
           method: 'bank',
+          currency: _selectedCurrency,
+          description: 'Withdrawal to Bank',
           details: {},
           pin: pin,
         ));
@@ -155,13 +162,9 @@ class _TransactScreenState extends State<TransactScreen> {
 
   Widget _buildModeToggle() {
     return Center(
-      child: Container(
+      child: GlassCard(
         padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-        ),
+        borderRadius: 20,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -358,84 +361,58 @@ class _TransactScreenState extends State<TransactScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Deposit Source', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text('Funding Source', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildSourceChip('Mobile Money', true),
-            _buildSourceChip('Bank', false),
-            _buildSourceChip('Card', false),
+            _buildDepositCard(LucideIcons.smartphone, 'M-Pesa', () => _navigateToDeposit('mpesa')),
+            const SizedBox(width: 12),
+            _buildDepositCard(LucideIcons.creditCard, 'Card', () => _navigateToDeposit('card')),
+            const SizedBox(width: 12),
+            _buildDepositCard(LucideIcons.landmark, 'Bank', () => _navigateToDeposit('bank')),
           ],
         ),
-        const SizedBox(height: 32),
-        const Text('Phone Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            hintText: 'Enter M-Pesa Number',
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
-            ),
+        const SizedBox(height: 40),
+        const Text('Funding History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text('No recent funding actions', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
           ),
         ),
-        const SizedBox(height: 32),
-        _buildAmountCard('Deposit Amount'),
-        const SizedBox(height: 32),
-        _buildSettlementBox(),
-        const SizedBox(height: 32),
-        _buildActionBtn('Deposit Now'),
       ],
     ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildSourceChip(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? AppColors.primary : AppColors.textSecondaryLight,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
+  Widget _buildDepositCard(IconData icon, String label, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: GlassCard(
+          height: 100,
+          padding: const EdgeInsets.all(12),
+          borderRadius: 24,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(height: 8),
+              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSettlementBox() {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final converted = CurrencyFormatter.convert(amount, _selectedCurrency, 'KES');
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Equivalent Credit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-          Text(CurrencyFormatter.format(converted, 'KES'), 
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
-        ],
-      ),
+  void _navigateToDeposit(String method) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DepositSetupScreen(method: method)),
     );
   }
 
@@ -446,7 +423,10 @@ class _TransactScreenState extends State<TransactScreen> {
       children: [
         const Text('Select Channel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
-        _buildChannelSelector(),
+        GestureDetector(
+          onTap: () => context.go('/transact/withdraw'),
+          child: _buildChannelSelector(),
+        ),
         const SizedBox(height: 32),
         _buildAmountCard('Withdraw Amount'),
         const SizedBox(height: 32),
