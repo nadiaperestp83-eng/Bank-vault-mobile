@@ -102,12 +102,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _buildGreeting(context, state.user),
                         const SizedBox(height: 24),
 
-                        _buildPortfolioSummaryCard(context, state)
+                        _buildAIInsightWidget(context, state.latestInsight)
                             .animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
-                        
-                        _buildRecentTransactions(context, state.transactions)
+
+                        _buildPortfolioSummaryCard(context, state)
                             .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
@@ -115,23 +115,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ...state.notifications
                             .where((n) => n.type == 'warning')
                             .map((n) => _buildWarningBanner(context, n)),
-
-                        _buildAIInsightWidget(context, state.latestInsight)
-                            .animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
                         _buildCoreAccountCard(context, state.wallet, state.user.primaryCurrency)
-                            .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+                            .animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
                         _buildGrowthChart(context, state.growthData)
-                            .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+                            .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
                         _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
+                            .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+
+                        const SizedBox(height: 24),
+                        
+                        _buildRecentTransactions(context, state.transactions)
                             .animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 120),
@@ -647,20 +649,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: logoPath != null 
+    final iconWidget = logoPath != null 
         ? SvgPicture.asset(
             logoPath, 
             width: 18, 
             height: 18, 
             placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 18),
           )
-        : Icon(icon, color: color, size: 18),
+        : Icon(icon, color: color, size: 18);
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: color == AppColors.success 
+          ? iconWidget.animate(onPlay: (controller) => controller.repeat())
+              .rotate(duration: 4.seconds, curve: Curves.linear)
+          : iconWidget,
     );
   }
 

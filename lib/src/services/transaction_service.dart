@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
+import 'transaction_cache.dart';
 
 class TransactionService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransactionCache _cache = TransactionCache();
 
   String _hashPin(String pin) {
     final bytes = utf8.encode(pin);
@@ -191,6 +193,14 @@ class TransactionService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return _getMockTransactions();
 
+    // Try cache first
+    final cached = await _cache.getCachedTransactionHistory();
+    if (cached != null && cached.isNotEmpty) {
+      // Return cached immediately and refresh in background if needed
+      _refreshTransactionHistoryInBackground(userId);
+      return cached;
+    }
+
     try {
       final response = await _supabase
           .from('transactions')
@@ -200,9 +210,28 @@ class TransactionService {
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isEmpty) return _getMockTransactions();
+      
+      _cache.saveTransactionHistory(transactions);
       return transactions;
     } catch (e) {
       return _getMockTransactions();
+    }
+  }
+
+  void _refreshTransactionHistoryInBackground(String userId) async {
+    try {
+      final response = await _supabase
+          .from('transactions')
+          .select('*, sender_profile:profiles!transactions_sender_id_fkey(*), receiver_profile:profiles!transactions_receiver_id_fkey(*)')
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .order('created_at', ascending: false);
+
+      final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
+      if (transactions.isNotEmpty) {
+        _cache.saveTransactionHistory(transactions);
+      }
+    } catch (e) {
+      // Silent error for background refresh
     }
   }
 
