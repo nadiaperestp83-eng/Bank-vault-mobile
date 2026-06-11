@@ -50,15 +50,80 @@ class TransactionService {
     });
   }
 
+  Future<VaultUser?> getCurrentUserProfile() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return null;
+
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .single();
+    
+    return VaultUser.fromJson(response);
+  }
+
+  Future<void> updateProfilePhoneNumber(String phoneNumber) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await _supabase.from('profiles').update({
+      'phone_number': phoneNumber,
+    }).eq('id', userId);
+  }
+
+  String formatPhoneNumber(String phone) {
+    String cleaned = phone.replaceAll(RegExp(r'\D'), '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '254${cleaned.substring(1)}';
+    } else if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+      cleaned = '254$cleaned';
+    } else if (cleaned.startsWith('+')) {
+      cleaned = cleaned.substring(1);
+    }
+    return cleaned;
+  }
+
+  Future<void> createPendingTransaction({
+    required String type,
+    required double amount,
+    required String description,
+    String? method,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('transactions').insert({
+      'sender_id': userId,
+      'receiver_id': userId,
+      'amount': amount,
+      'type': type,
+      'status': 'pending',
+      'description': description,
+      'method': method,
+    });
+  }
+
   Future<String?> initiateMpesaDeposit({
     required String phoneNumber,
     required double amount,
   }) async {
+    final formattedPhone = formatPhoneNumber(phoneNumber);
     final response = await _supabase.functions.invoke('mpesa-deposit', body: {
-      'phoneNumber': phoneNumber,
+      'phoneNumber': formattedPhone,
       'amount': amount,
     });
-    return response.data?['CheckoutRequestID'] as String?;
+    
+    final checkoutId = response.data?['CheckoutRequestID'] as String?;
+    if (checkoutId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: amount,
+        description: checkoutId,
+        method: 'mpesa',
+      );
+    }
+    return checkoutId;
   }
 
   Future<Map<String, dynamic>> createStripePaymentIntent({
@@ -69,7 +134,20 @@ class TransactionService {
       'amount': amount,
       'currency': currency,
     });
-    return response.data as Map<String, dynamic>;
+    
+    final intentData = response.data as Map<String, dynamic>;
+    final intentId = intentData['id'] as String?;
+    
+    if (intentId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: amount,
+        description: intentId,
+        method: 'card',
+      );
+    }
+    
+    return intentData;
   }
 
   Future<void> initiateWithdrawal({

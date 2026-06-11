@@ -92,6 +92,8 @@ class TransactionStatusUpdated extends TransactionEvent {
   List<Object?> get props => [transaction];
 }
 
+class TransactionTimeoutOccurred extends TransactionEvent {}
+
 class ToggleCurrency extends TransactionEvent {
   final String currency;
   ToggleCurrency(this.currency);

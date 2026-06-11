@@ -44,3 +44,10 @@ class TransactionError extends TransactionState {
   @override
   List<Object?> get props => [message];
 }
+
+class TransactionTimeout extends TransactionState {
+  final String message;
+  TransactionTimeout(this.message);
+  @override
+  List<Object?> get props => [message];
+}

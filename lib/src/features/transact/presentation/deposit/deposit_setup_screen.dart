@@ -12,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/services/transaction_service.dart';
+import 'package:vault_os/src/models/vault_models.dart';
 
 class DepositSetupScreen extends StatefulWidget {
   final String method;
@@ -27,13 +28,25 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   final TransactionService _txService = TransactionService();
   List<Map<String, dynamic>> _systemAccounts = [];
   bool _isLoadingAccounts = false;
+  VaultUser? _currentUser;
+  bool _isAddingNew = false;
+  bool _rememberNumber = false;
 
   @override
   void initState() {
     super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
     if (widget.method == 'bank') {
       _loadSystemAccounts();
     }
+    _currentUser = await _txService.getCurrentUserProfile();
+    if (_currentUser?.phoneNumber != null) {
+      _phoneController.text = _currentUser!.phoneNumber!;
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadSystemAccounts() async {
@@ -61,18 +74,32 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       return;
     }
 
+    final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
+
+    if (phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a phone number'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PinEntrySheet(
-        onConfirm: (pin) {
+        onConfirm: (pin) async {
           if (widget.method == 'mpesa') {
-            context.read<TransactionBloc>().add(PerformMpesaDeposit(
-              phoneNumber: _phoneController.text,
-              amount: amount,
-              pin: pin,
-            ));
+            if (_isAddingNew && _rememberNumber) {
+              await _txService.updateProfilePhoneNumber(phoneNumber);
+            }
+            if (mounted) {
+              context.read<TransactionBloc>().add(PerformMpesaDeposit(
+                phoneNumber: phoneNumber,
+                amount: amount,
+                pin: pin,
+              ));
+            }
           } else if (widget.method == 'card') {
             context.read<TransactionBloc>().add(PerformStripeDeposit(
               amount: amount,
@@ -97,6 +124,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        } else if (state is TransactionTimeout) {
+          Navigator.pop(context); // Close setup as it's pending
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.orange),
           );
         }
       },
@@ -161,18 +193,71 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('M-Pesa Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            hintText: 'e.g. 254712345678',
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('M-Pesa Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            TextButton.icon(
+              onPressed: () => setState(() => _isAddingNew = !_isAddingNew),
+              icon: Icon(_isAddingNew ? LucideIcons.user : LucideIcons.plus, size: 16),
+              label: Text(_isAddingNew ? 'Use Primary' : 'Add New', style: const TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
+        const SizedBox(height: 8),
+        if (!_isAddingNew && _currentUser?.phoneNumber != null)
+          GestureDetector(
+            onTap: () => setState(() => _isAddingNew = false),
+            child: GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                    child: const Icon(LucideIcons.phone, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Primary Number', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                      Text(_currentUser!.phoneNumber!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
+                ],
+              ),
+            ),
+          )
+        else
+          Column(
+            children: [
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  prefixText: '+254 ',
+                  hintText: '7XXXXXXXX',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberNumber,
+                    onChanged: (v) => setState(() => _rememberNumber = v ?? false),
+                    activeColor: AppColors.primary,
+                  ),
+                  const Text('Remember this number', style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+                ],
+              ),
+            ],
+          ),
       ],
     );
   }
