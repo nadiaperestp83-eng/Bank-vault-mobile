@@ -27,6 +27,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TransactionService _txService = TransactionService();
   List<BankAccount> _userAccounts = [];
+  List<Map<String, dynamic>> _systemAccounts = [];
   BankAccount? _selectedAccount;
   String? _referenceCode;
   bool _isLoadingAccounts = false;
@@ -172,6 +173,106 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAmountInput(Color secondaryTextColor) {
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    final kesEquivalent = amount * 130.0;
+
+    return GlassCard(
+      child: Column(
+        children: [
+          Text('Enter Amount (USD)', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textAlign: TextAlign.center,
+            onChanged: (v) => setState(() {}),
+            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(hintText: '0.00', border: InputBorder.none),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '≈ ${CurrencyFormatter.format(kesEquivalent, 'KES')}',
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMpesaField(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('M-Pesa Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            TextButton.icon(
+              onPressed: () => setState(() => _isAddingNew = !_isAddingNew),
+              icon: Icon(_isAddingNew ? LucideIcons.user : LucideIcons.plus, size: 16),
+              label: Text(_isAddingNew ? 'Use Primary' : 'Add New', style: const TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (!_isAddingNew && _currentUser?.phoneNumber != null)
+          GestureDetector(
+            onTap: () => setState(() => _isAddingNew = false),
+            child: GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                    child: const Icon(LucideIcons.phone, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Primary Number', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                      Text(_currentUser!.phoneNumber!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
+                ],
+              ),
+            ),
+          )
+        else
+          Column(
+            children: [
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  prefixText: '+254 ',
+                  hintText: '7XXXXXXXX',
+                  filled: true,
+                  fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberNumber,
+                    onChanged: (v) => setState(() => _rememberNumber = v ?? false),
+                    activeColor: AppColors.primary,
+                  ),
+                  const Text('Remember this number', style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+                ],
+              ),
+            ],
+          ),
+      ],
     );
   }
 

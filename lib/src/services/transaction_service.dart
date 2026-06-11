@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
@@ -111,7 +112,7 @@ class TransactionService {
     if (userId == null) throw Exception('User not authenticated');
 
     final fileName = 'receipts/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
-    await _supabase.storage.from('receipts').upload(fileName, filePath);
+    await _supabase.storage.from('receipts').upload(fileName, File(filePath));
     return _supabase.storage.from('receipts').getPublicUrl(fileName);
   }
 
