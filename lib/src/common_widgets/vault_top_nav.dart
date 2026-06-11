@@ -16,6 +16,7 @@ import 'package:vault_os/src/models/receipt_model.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vault_os/src/common_widgets/vault_logo.dart';
 
 class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   const VaultTopNav({super.key});
@@ -66,7 +67,6 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildLogo(BuildContext context, VaultAuthState authState) {
-    final theme = Theme.of(context);
     final currentPath = GoRouterState.of(context).uri.path;
     final isLanding = currentPath == '/login' || currentPath == '/signup';
 
@@ -79,32 +79,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           context.go('/');
         }
       },
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'V',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -1,
-            ),
-          ),
-        ),
-      ),
+      child: const VaultLogo(),
     );
   }
 

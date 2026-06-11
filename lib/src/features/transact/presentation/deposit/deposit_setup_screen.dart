@@ -87,6 +87,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) {
         if (state is TransactionSuccess) {
@@ -101,13 +106,13 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           title: Text('${widget.method.toUpperCase()} Deposit', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+            icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -116,10 +121,10 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.method == 'bank') _buildBankInfo() else ...[
-                _buildAmountInput(),
+              if (widget.method == 'bank') _buildBankInfo(secondaryTextColor) else ...[
+                _buildAmountInput(secondaryTextColor),
                 const SizedBox(height: 32),
-                if (widget.method == 'mpesa') _buildMpesaField(),
+                if (widget.method == 'mpesa') _buildMpesaField(isDark),
                 const SizedBox(height: 48),
                 _buildActionButton(),
               ],
@@ -130,14 +135,14 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     );
   }
 
-  Widget _buildAmountInput() {
+  Widget _buildAmountInput(Color secondaryTextColor) {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final kesEquivalent = amount * 130.0;
 
     return GlassCard(
       child: Column(
         children: [
-          const Text('Enter Amount (USD)', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+          Text('Enter Amount (USD)', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
           const SizedBox(height: 16),
           TextField(
             controller: _amountController,
@@ -157,7 +162,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     );
   }
 
-  Widget _buildMpesaField() {
+  Widget _buildMpesaField(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -169,7 +174,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
           decoration: InputDecoration(
             hintText: 'e.g. 254712345678',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           ),
         ),
@@ -177,7 +182,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     );
   }
 
-  Widget _buildBankInfo() {
+  Widget _buildBankInfo(Color secondaryTextColor) {
     if (_isLoadingAccounts) return const Center(child: CircularProgressIndicator());
     if (_systemAccounts.isEmpty) return const Center(child: Text('No bank accounts available'));
 
@@ -186,8 +191,8 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       children: [
         const Text('Manual Bank Funding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
-        const Text('Transfer funds to any of the accounts below and upload the receipt in the help section.', 
-          style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+        Text('Transfer funds to any of the accounts below and upload the receipt in the help section.', 
+          style: TextStyle(color: secondaryTextColor, fontSize: 12)),
         const SizedBox(height: 24),
         ..._systemAccounts.map((acc) => Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -210,8 +215,8 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('A/C: ${acc['account_number']}', style: const TextStyle(fontSize: 14, color: AppColors.textSecondaryLight)),
-                Text('Name: ${acc['account_holder_name']}', style: const TextStyle(fontSize: 14, color: AppColors.textSecondaryLight)),
+                Text('A/C: ${acc['account_number']}', style: TextStyle(fontSize: 14, color: secondaryTextColor)),
+                Text('Name: ${acc['account_holder_name']}', style: TextStyle(fontSize: 14, color: secondaryTextColor)),
               ],
             ),
           ),

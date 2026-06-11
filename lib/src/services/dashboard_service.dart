@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:rxdart/rxdart.dart';
 import '../models/vault_models.dart';
 import '../models/receipt_model.dart';
 
@@ -188,13 +189,46 @@ class DashboardService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    return _supabase
+    // Combine notifications and activity logs
+    final notificationsStream = _supabase
         .from('notifications')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .map((data) => data
-            .map((json) => VaultNotification.fromJson(json))
-            .toList());
+        .eq('user_id', userId);
+
+    final activityLogsStream = _supabase
+        .from('activity_logs')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId);
+
+    return Rx.combineLatest2<List<Map<String, dynamic>>, List<Map<String, dynamic>>, List<VaultNotification>>(
+      notificationsStream,
+      activityLogsStream,
+      (notifications, logs) {
+        final List<VaultNotification> combined = [];
+        
+        // Map standard notifications
+        combined.addAll(notifications.map((json) => VaultNotification.fromJson(json)));
+        
+        // Map activity logs to notifications
+        combined.addAll(logs.map((log) {
+          final actionType = log['action_type'] as String? ?? 'Activity';
+          final deviceInfo = log['device_info'] as String? ?? 'Unknown device';
+          final location = log['location'] as String? ?? '';
+          
+          return VaultNotification(
+            id: 'log_${log['id']}',
+            userId: userId,
+            title: actionType,
+            message: 'Detected on $deviceInfo ${location.isNotEmpty ? "near $location" : ""}',
+            type: (log['is_suspicious'] == true) ? 'warning' : 'info',
+            isRead: true, // Activity logs are considered "read" by default for display
+            createdAt: DateTime.parse(log['created_at'] as String),
+          );
+        }));
+
+        return combined;
+      },
+    );
   }
 
   Future<void> markAsRead(String notificationId) async {

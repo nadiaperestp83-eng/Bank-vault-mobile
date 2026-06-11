@@ -34,6 +34,10 @@ Future<void> _onUnlockWithBiometricsRequested(UnlockWithBiometricsRequested even
     final userId = event.userId;
     final hasProfile = await _authService.checkProfileExists(userId);
     final hasPin = hasProfile ? await _authService.hasTransactionPin(userId) : false;
+    
+    // Log biometric login activity
+    await _authService.logActivity('Biometric Login', userId: userId);
+    
     emit(VaultAuthenticated(userId, hasProfile: hasProfile, hasPin: hasPin));
   } catch (e) {
     emit(VaultAuthError(e.toString()));
@@ -61,6 +65,10 @@ Future<void> _onUnlockWithBiometricsRequested(UnlockWithBiometricsRequested even
         final userId = response.user!.id;
         final hasProfile = await _authService.checkProfileExists(userId);
         final hasPin = hasProfile ? await _authService.hasTransactionPin(userId) : false;
+        
+        // Log login activity
+        await _authService.logActivity('Login', userId: userId);
+        
         emit(VaultAuthenticated(userId, hasProfile: hasProfile, hasPin: hasPin));
       } else {
         emit(VaultAuthError('Verification failed'));
@@ -75,6 +83,10 @@ Future<void> _onUnlockWithBiometricsRequested(UnlockWithBiometricsRequested even
   }
 
   void _onLoggedOut(LoggedOut event, Emitter<VaultAuthState> emit) async {
+    final userId = _authService.currentUser?.id;
+    if (userId != null) {
+      await _authService.logActivity('Sign Out', userId: userId);
+    }
     await Supabase.instance.client.auth.signOut();
     emit(VaultUnauthenticated());
   }

@@ -53,6 +53,11 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final navBackgroundColor = isDark ? AppColors.darkBackground : Colors.white;
+
     return Scaffold(
       appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
@@ -87,7 +92,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
-        color: Colors.white,
+        color: navBackgroundColor,
         elevation: 10,
         child: Container(
           height: 60,
@@ -95,11 +100,11 @@ class _MainShellState extends ConsumerState<MainShell> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildNavItem(0, LucideIcons.home, 'Home'),
-              _buildNavItem(1, LucideIcons.landmark, 'Finance'),
+              _buildNavItem(0, LucideIcons.home, 'Home', secondaryTextColor),
+              _buildNavItem(1, LucideIcons.landmark, 'Finance', secondaryTextColor),
               const SizedBox(width: 40), // Spacer for FAB
-              _buildNavItem(3, LucideIcons.settings, 'Settings'),
-              _buildNavItem(4, LucideIcons.helpCircle, 'Help'),
+              _buildNavItem(3, LucideIcons.settings, 'Settings', secondaryTextColor),
+              _buildNavItem(4, LucideIcons.helpCircle, 'Help', secondaryTextColor),
             ],
           ),
         ),
@@ -107,7 +112,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(int index, IconData icon, String label, Color secondaryTextColor) {
     bool isSelected = _currentIndex == index;
     return InkWell(
       onTap: () => _onTap(context, index),
@@ -116,7 +121,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         children: [
           Icon(
             icon,
-            color: isSelected ? AppColors.primary : AppColors.textSecondaryLight,
+            color: isSelected ? AppColors.primary : secondaryTextColor,
             size: 20,
           ),
           const SizedBox(height: 4),
@@ -125,7 +130,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? AppColors.primary : AppColors.textSecondaryLight,
+              color: isSelected ? AppColors.primary : secondaryTextColor,
             ),
           ),
         ],

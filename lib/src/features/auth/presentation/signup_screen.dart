@@ -8,6 +8,7 @@ import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 
+import 'package:vault_os/src/common_widgets/vault_logo.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vault_os/src/services/supabase_service.dart';
 
@@ -243,10 +244,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
     return Column(
       key: const ValueKey('step1'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        const VaultLogo(size: 52, borderRadius: 16, fontSize: 28),
+        const SizedBox(height: AppSizes.p24),
         Text(
           'Create Your Vault Account',
+          textAlign: TextAlign.center,
           style: GoogleFonts.dmSerifDisplay(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -325,7 +329,7 @@ class _SignupScreenState extends State<SignupScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(LucideIcons.mailCheck, color: AppColors.primary, size: 52),
+        const VaultLogo(size: 52, borderRadius: 16, fontSize: 28),
         const SizedBox(height: AppSizes.p20),
         Text(
           'Verify Your Email',
@@ -377,7 +381,7 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       key: const ValueKey('success'),
       children: [
-        const Icon(LucideIcons.partyPopper, color: AppColors.primary, size: 68),
+        const VaultLogo(size: 68, borderRadius: 20, fontSize: 36),
         const SizedBox(height: AppSizes.p24),
         Text(
           'Account Created!',

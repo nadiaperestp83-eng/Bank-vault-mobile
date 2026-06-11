@@ -67,6 +67,11 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) {
         if (state is TransactionSuccess) {
@@ -98,12 +103,12 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+            icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -111,11 +116,11 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
           padding: const EdgeInsets.all(AppSizes.p24),
           child: Column(
             children: [
-              _buildRecipientHeader(),
+              _buildRecipientHeader(secondaryTextColor),
               const SizedBox(height: 48),
-              _buildAmountInput(),
+              _buildAmountInput(secondaryTextColor, isDark),
               const SizedBox(height: 48),
-              _buildBalanceInfo(),
+              _buildBalanceInfo(secondaryTextColor, isDark),
               const SizedBox(height: 48),
               _buildConfirmButton(),
             ],
@@ -125,7 +130,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     );
   }
 
-  Widget _buildRecipientHeader() {
+  Widget _buildRecipientHeader(Color secondaryTextColor) {
     return Column(
       children: [
         CircleAvatar(
@@ -143,16 +148,16 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
         ),
         Text(
           widget.recipient.kycTag ?? '',
-          style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 14),
+          style: TextStyle(color: secondaryTextColor, fontSize: 14),
         ),
       ],
     ).animate().fadeIn().scale();
   }
 
-  Widget _buildAmountInput() {
+  Widget _buildAmountInput(Color secondaryTextColor, bool isDark) {
     return Column(
       children: [
-        const Text('Enter Amount', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+        Text('Enter Amount', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -173,10 +178,10 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '0.00',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintStyle: TextStyle(color: isDark ? Colors.grey[700] : Colors.grey),
                 ),
                 autofocus: true,
               ),
@@ -187,22 +192,22 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     );
   }
 
-  Widget _buildBalanceInfo() {
+  Widget _buildBalanceInfo(Color secondaryTextColor, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(LucideIcons.wallet, size: 16, color: AppColors.textSecondaryLight),
+          Icon(LucideIcons.wallet, size: 16, color: secondaryTextColor),
           const SizedBox(width: 8),
           Text(
             'Balance: ${CurrencyFormatter.format(_currentWallet?.balance ?? 0.0, _currentWallet?.currency ?? 'KES')}',
-            style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(color: secondaryTextColor, fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),

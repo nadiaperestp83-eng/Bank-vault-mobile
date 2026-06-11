@@ -46,14 +46,18 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Send Money', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+          icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
           onPressed: () => context.pop(),
         ),
       ),
@@ -64,9 +68,9 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
             padding: const EdgeInsets.all(AppSizes.p20),
             child: Column(
               children: [
-                _buildSearchBar(),
+                _buildSearchBar(isDark),
                 const SizedBox(height: 24),
-                _buildScanQRCard(),
+                _buildScanQRCard(isDark),
               ],
             ),
           ),
@@ -75,13 +79,14 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
             child: Text('Recipients', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           const SizedBox(height: 16),
-          Expanded(child: _buildRecipientList()),
+          Expanded(child: _buildRecipientList(isDark)),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDark) {
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
     return TextField(
       controller: _searchController,
       onChanged: (v) => context.read<TransactionBloc>().add(SearchRecipients(v)),
@@ -95,20 +100,21 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
               })
             : null,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: isDark ? AppColors.darkSurface : Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+          borderSide: BorderSide(color: borderColor),
         ),
       ),
     );
   }
 
-  Widget _buildScanQRCard() {
+  Widget _buildScanQRCard(bool isDark) {
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     return GestureDetector(
       onTap: () {
         HapticFeedback.heavyImpact();
@@ -128,23 +134,24 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
               child: const Icon(LucideIcons.qrCode, color: AppColors.primary, size: 28),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Scan QR Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Instantly pay any Vault user', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                  const Text('Scan QR Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Instantly pay any Vault user', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(LucideIcons.chevronRight, color: AppColors.textSecondaryLight),
+            Icon(LucideIcons.chevronRight, color: secondaryTextColor),
           ],
         ),
       ).animate().fadeIn().slideX(begin: 0.1, end: 0),
     );
   }
 
-  Widget _buildRecipientList() {
+  Widget _buildRecipientList(bool isDark) {
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     return BlocBuilder<TransactionBloc, TransactionState>(
       builder: (context, state) {
         List<VaultUser> recipients = [];
@@ -153,7 +160,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
         }
 
         if (recipients.isEmpty) {
-          return const Center(child: Text('No users found', style: TextStyle(color: AppColors.textSecondaryLight)));
+          return Center(child: Text('No users found', style: TextStyle(color: secondaryTextColor)));
         }
 
         return ListView.separated(
@@ -183,11 +190,11 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${user.firstName} ${user.lastName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text(user.kycTag ?? '', style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                          Text(user.kycTag ?? '', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
                         ],
                       ),
                     ),
-                    const Icon(LucideIcons.chevronRight, size: 18, color: AppColors.textSecondaryLight),
+                    Icon(LucideIcons.chevronRight, size: 18, color: secondaryTextColor),
                   ],
                 ),
               ),

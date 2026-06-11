@@ -5,6 +5,13 @@ enum AuthStatus { initial, loading, codeSent, authenticated, error }
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  Future<AuthResponse> signInWithPassword(String email, String password) async {
+    return await _supabase.auth.signInWithPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
   Future<void> sendOtp(String email) async {
     await _supabase.auth.signInWithOtp(
       email: email.trim(),
@@ -72,4 +79,21 @@ class AuthService {
   User? get currentUser => _supabase.auth.currentUser;
   
   Session? get currentSession => _supabase.auth.currentSession;
+
+  Future<void> logActivity(String actionType, {String? userId}) async {
+    final uid = userId ?? _supabase.auth.currentUser?.id;
+    if (uid == null) return;
+
+    try {
+      await _supabase.from('activity_logs').insert({
+        'user_id': uid,
+        'action_type': actionType,
+        'device_info': 'Mobile App',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      // Silently fail logging to avoid disrupting the main flow
+      print('Failed to log activity: $e');
+    }
+  }
 }
