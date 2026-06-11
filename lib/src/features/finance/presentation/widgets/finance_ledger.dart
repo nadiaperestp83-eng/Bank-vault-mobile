@@ -8,6 +8,9 @@ class FinanceLedger extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -18,9 +21,11 @@ class FinanceLedger extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+            ),
           ),
           child: Column(
             children: [
@@ -28,15 +33,15 @@ class FinanceLedger extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Expanded(child: Text('Date', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight))),
-                    Expanded(child: Text('Source', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight))),
-                    Expanded(child: Text('Type', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight))),
-                    Expanded(child: Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight))),
+                    Expanded(child: Text('Date', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight))),
+                    Expanded(child: Text('Source', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight))),
+                    Expanded(child: Text('Type', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight))),
+                    Expanded(child: Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight))),
                   ],
                 ),
               ),
@@ -45,7 +50,11 @@ class FinanceLedger extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: transactions.length,
-                separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, color: Colors.black.withValues(alpha: 0.05)),
+                separatorBuilder: (context, index) => Divider(
+                  height: 1, 
+                  thickness: 0.5, 
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                ),
                 itemBuilder: (context, index) {
                   final tx = transactions[index];
                   return Padding(

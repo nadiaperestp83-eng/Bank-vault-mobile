@@ -61,6 +61,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     return Scaffold(
       appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           widget.child,

@@ -226,6 +226,9 @@ class DashboardService {
           );
         }));
 
+        // Sort by date descending (newest first)
+        combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
         return combined;
       },
     );
@@ -257,9 +260,11 @@ class DashboardService {
         .from('receipts')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .map((data) => data
-            .map((json) => VaultReceipt.fromJson(json))
-            .toList());
+        .map((data) {
+          final receipts = data.map((json) => VaultReceipt.fromJson(json)).toList();
+          receipts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return receipts;
+        });
   }
 
   Future<List<VaultReceipt>> getReceipts({int limit = 20, int offset = 0}) async {

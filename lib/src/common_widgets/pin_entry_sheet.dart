@@ -42,11 +42,17 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = isDark ? AppColors.darkBackground : Colors.white;
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.p24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -55,27 +61,27 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.2),
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 32),
           const Icon(LucideIcons.lock, size: 32, color: AppColors.primary),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Enter Transaction PIN',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimaryLight,
+              color: primaryTextColor,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Confirm your 6-digit PIN to proceed',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textSecondaryLight,
+              color: secondaryTextColor,
             ),
           ),
           const SizedBox(height: 40),
@@ -89,50 +95,50 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
                 height: 16,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isFilled ? AppColors.primary : Colors.grey.withValues(alpha: 0.2),
+                  color: isFilled ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2)),
                 ),
               );
             }),
           ),
           const SizedBox(height: 48),
-          _buildKeypad(),
+          _buildKeypad(primaryTextColor),
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildKeypad() {
+  Widget _buildKeypad(Color primaryTextColor) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: ['1', '2', '3'].map(_buildKey).toList(),
+          children: ['1', '2', '3'].map((key) => _buildKey(key, primaryTextColor)).toList(),
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: ['4', '5', '6'].map(_buildKey).toList(),
+          children: ['4', '5', '6'].map((key) => _buildKey(key, primaryTextColor)).toList(),
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: ['7', '8', '9'].map(_buildKey).toList(),
+          children: ['7', '8', '9'].map((key) => _buildKey(key, primaryTextColor)).toList(),
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             const SizedBox(width: 80),
-            _buildKey('0'),
-            _buildBackspaceKey(),
+            _buildKey('0', primaryTextColor),
+            _buildBackspaceKey(primaryTextColor),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKey(String label) {
+  Widget _buildKey(String label, Color primaryTextColor) {
     return InkWell(
       onTap: () => _onKeyTap(label),
       borderRadius: BorderRadius.circular(40),
@@ -142,17 +148,17 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
         alignment: Alignment.center,
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimaryLight,
+            color: primaryTextColor,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBackspaceKey() {
+  Widget _buildBackspaceKey(Color primaryTextColor) {
     return InkWell(
       onTap: _onBackspace,
       borderRadius: BorderRadius.circular(40),
@@ -160,7 +166,7 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
         width: 80,
         height: 80,
         alignment: Alignment.center,
-        child: const Icon(LucideIcons.delete, color: AppColors.textPrimaryLight),
+        child: Icon(LucideIcons.delete, color: primaryTextColor),
       ),
     );
   }

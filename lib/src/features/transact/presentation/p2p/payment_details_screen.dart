@@ -12,6 +12,8 @@ import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/services/dashboard_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vault_os/src/services/biometric_service.dart';
+import 'package:vault_os/src/services/storage_service.dart';
 import 'transfer_result_screen.dart';
 
 class PaymentDetailsScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class PaymentDetailsScreen extends StatefulWidget {
 class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
   final TextEditingController _amountController = TextEditingController();
   final DashboardService _dashboardService = DashboardService();
+  final BiometricService _biometricService = BiometricService();
+  final StorageService _storageService = StorageService();
   Wallet? _currentWallet;
   StreamSubscription? _walletSubscription;
   String _selectedCurrency = 'KES';
@@ -42,6 +46,40 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     _amountController.dispose();
     _walletSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _handlePaymentConfirmation() async {
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    if (amount <= 0) return;
+
+    final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+    final isBiometricEnabled = await _storageService.isBiometricEnabled();
+
+    if (isBiometricAvailable && isBiometricEnabled) {
+      final authenticated = await _biometricService.authenticate(
+        reason: 'Authenticate to confirm payment of $_selectedCurrency $amount to ${widget.recipient.firstName}',
+      );
+
+      if (authenticated) {
+        final credentials = await _storageService.getCredentials();
+        final storedPin = credentials['pin'];
+
+        if (storedPin != null) {
+          if (mounted) {
+            context.read<TransactionBloc>().add(PerformVaultTransfer(
+              recipientTag: widget.recipient.kycTag!,
+              amount: amount,
+              currency: _selectedCurrency,
+              pin: storedPin,
+            ));
+          }
+          return;
+        }
+      }
+    }
+
+    // Fallback to PIN entry sheet
+    if (mounted) _showPinSheet();
   }
 
   void _showPinSheet() {
@@ -219,7 +257,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
       builder: (context, state) {
         final isLoading = state is TransactionLoading || state is TransactionInProgress;
         return ElevatedButton(
-          onPressed: isLoading ? null : _showPinSheet,
+          onPressed: isLoading ? null : _handlePaymentConfirmation,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,

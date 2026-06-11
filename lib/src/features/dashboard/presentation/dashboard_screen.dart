@@ -79,9 +79,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             }
           }
-          if (state is DashboardError) {
+          if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
             );
           }
         },
@@ -203,18 +203,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.alertTriangle, color: Colors.red, size: 18),
+          const Icon(LucideIcons.alertTriangle, color: AppColors.error, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               notification.message,
-              style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -579,7 +579,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           '${isPositive ? '+' : '-'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isPositive ? Colors.green : Colors.red,
+                            color: isPositive ? AppColors.success : AppColors.error,
                             fontSize: 14,
                           ),
                         ),
@@ -617,13 +617,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (tx.type == 'deposit') {
       icon = LucideIcons.arrowDownLeft;
-      color = Colors.green;
+      color = AppColors.success;
     } else if (tx.type == 'withdrawal') {
       icon = LucideIcons.arrowUpRight;
-      color = Colors.red;
+      color = AppColors.error;
     } else {
       icon = isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight;
-      color = isPositive ? Colors.green : Colors.blue;
+      color = isPositive ? AppColors.success : theme.colorScheme.primary;
     }
 
     return Container(

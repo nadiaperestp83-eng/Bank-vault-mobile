@@ -120,16 +120,16 @@ class _TransactScreenState extends State<TransactScreen> {
               );
               await Stripe.instance.presentPaymentSheet();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Payment Successful!'), backgroundColor: Colors.green),
+                const SnackBar(content: Text('Payment Successful!'), backgroundColor: AppColors.success),
               );
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Payment Cancelled/Failed: $e'), backgroundColor: Colors.red),
+                SnackBar(content: Text('Payment Cancelled/Failed: $e'), backgroundColor: AppColors.error),
               );
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
             );
           }
           _amountController.clear();
@@ -138,7 +138,7 @@ class _TransactScreenState extends State<TransactScreen> {
           setState(() => _selectedRecipient = null);
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
           );
         }
       },
@@ -497,7 +497,7 @@ class _TransactScreenState extends State<TransactScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isRed ? Colors.red : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            color: isRed ? AppColors.error : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
           ),
         ),
       ],
@@ -639,12 +639,12 @@ class _TransactScreenState extends State<TransactScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${isDebit ? '-' : '+'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isDebit ? Colors.red : Colors.green,
-                            ),
+                          '${isDebit ? '-' : '+'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: isDebit ? AppColors.error : AppColors.success,
+                          ),
                           ),
                           if (tx.recordedBalance != null)
                             Text(CurrencyFormatter.format(tx.recordedBalance!, tx.currency), 

@@ -97,11 +97,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         if (state is TransactionSuccess) {
           Navigator.pop(context); // Close setup
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
           );
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
           );
         }
       },

@@ -9,6 +9,9 @@ import 'package:vault_os/src/models/device_model.dart';
 import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/profile_model.dart';
 
+import 'package:vault_os/src/services/storage_service.dart';
+import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
+
 class SecurityCenterSection extends ConsumerWidget {
   const SecurityCenterSection({super.key});
 
@@ -116,7 +119,11 @@ class SecurityCenterSection extends ConsumerWidget {
             'Use FaceID or Fingerprint',
             LucideIcons.fingerprint,
             prefs.biometricEnabled,
-            (v) => ref.read(settingsServiceProvider).updatePreferences(prefs.copyWith(biometricEnabled: v)),
+            (v) async {
+              await ref.read(settingsServiceProvider).updatePreferences(prefs.copyWith(biometricEnabled: v));
+              // Also update local StorageService
+              await StorageService().setBiometricEnabled(v);
+            },
           ),
           const Divider(height: AppSizes.p24),
           _buildToggleRow(
@@ -298,6 +305,9 @@ class _PINChangeWorkflowState extends ConsumerState<PINChangeWorkflow> {
         
         await settingsService.verifyPinResetOtp(email, _otpController.text);
         await settingsService.updatePin(profile.id, _newPinController.text);
+        
+        // Save to secure storage for biometrics
+        await StorageService().saveCredentials(email, _newPinController.text);
         
         if (mounted) Navigator.pop(context);
       }

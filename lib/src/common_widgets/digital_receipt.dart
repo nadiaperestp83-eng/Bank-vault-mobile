@@ -20,6 +20,10 @@ class DigitalReceipt extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final paperColor = isDark ? AppColors.darkSurface.withValues(alpha: 1.0) : Colors.white;
+    final labelColor = isDark ? AppColors.textSecondaryDark : Colors.grey;
+    final dashColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[300]!;
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.p20),
       child: Column(
@@ -29,7 +33,7 @@ class DigitalReceipt extends StatelessWidget {
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.white,
+              color: paperColor,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               boxShadow: [
                 BoxShadow(
@@ -52,13 +56,13 @@ class DigitalReceipt extends StatelessWidget {
                   child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 32),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'VAULT RECEIPT',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
-                    color: Colors.grey,
+                    color: labelColor,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -87,11 +91,11 @@ class DigitalReceipt extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildDetailRow('Receipt Number', receipt.receiptNumber, theme),
-                      const Divider(height: 24),
+                      Divider(height: 24, color: isDark ? Colors.white.withValues(alpha: 0.05) : null),
                       _buildDetailRow('Date', DateFormat('MMM dd, yyyy HH:mm').format(receipt.createdAt), theme),
-                      const Divider(height: 24),
+                      Divider(height: 24, color: isDark ? Colors.white.withValues(alpha: 0.05) : null),
                       _buildDetailRow('Payment Method', receipt.transactionDetails['method']?.toString().toUpperCase() ?? 'WALLET', theme),
-                      const Divider(height: 24),
+                      Divider(height: 24, color: isDark ? Colors.white.withValues(alpha: 0.05) : null),
                       _buildDetailRow('Status', 'COMPLETED', theme, valueColor: AppColors.success),
                     ],
                   ),
@@ -121,7 +125,7 @@ class DigitalReceipt extends StatelessWidget {
                 // Dashed Cut Line
                 CustomPaint(
                   size: const Size(double.infinity, 20),
-                  painter: DashPainter(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+                  painter: DashPainter(color: dashColor),
                 ),
               ],
             ),

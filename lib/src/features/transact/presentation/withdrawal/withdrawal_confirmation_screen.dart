@@ -75,7 +75,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
         } else if (state is TransactionError) {
           setState(() => _isProcessing = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
           );
         }
       },
@@ -156,7 +156,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: isRed ? Colors.red : primaryTextColor,
+            color: isRed ? AppColors.error : primaryTextColor,
           ),
         ),
       ],
