@@ -30,3 +30,10 @@ class LoggedIn extends AuthEvent {
 }
 
 class LoggedOut extends AuthEvent {}
+
+class UnlockWithBiometricsRequested extends AuthEvent {
+  final String userId;
+  UnlockWithBiometricsRequested(this.userId);
+  @override
+  List<Object?> get props => [userId];
+}

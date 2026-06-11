@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
+import 'package:vault_os/src/common_widgets/vault_logo.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
@@ -76,6 +77,30 @@ class _LoginScreenState extends State<LoginScreen> {
     _pinController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleInitialBiometricUnlock(String userId) async {
+    final credentials = await _storageService.getCredentials();
+    final savedEmail = credentials['email'];
+    final savedPin = credentials['pin'];
+
+    // If no credentials saved, we can't auto-unlock even with biometrics
+    if (savedEmail == null || savedPin == null) {
+      return;
+    }
+
+    final authenticated = await _biometricService.authenticate(
+      reason: 'Unlock your vault',
+    );
+
+    if (authenticated && mounted) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _emailController.text = savedEmail;
+        _pinController.text = savedPin;
+      });
+      context.read<AuthBloc>().add(UnlockWithBiometricsRequested(userId));
+    }
   }
 
   Future<void> _handleBiometricAuth() async {
@@ -152,6 +177,10 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() => _isLoading = true);
         } else {
           setState(() => _isLoading = false);
+        }
+
+        if (state is VaultLocked) {
+          _handleInitialBiometricUnlock(state.userId);
         }
 
         if (state is VaultOtpSent) {
@@ -386,24 +415,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildVaultLogo() {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            blurRadius: 12,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 28),
-      ),
+    return const VaultLogo(
+      size: 52,
+      borderRadius: 16,
+      fontSize: 28,
     );
   }
 

@@ -24,6 +24,13 @@ class VaultAuthenticated extends VaultAuthState {
 
 class VaultUnauthenticated extends VaultAuthState {}
 
+class VaultLocked extends VaultAuthState {
+  final String userId;
+  VaultLocked(this.userId);
+  @override
+  List<Object?> get props => [userId];
+}
+
 class VaultAuthError extends VaultAuthState {
   final String message;
   VaultAuthError(this.message);

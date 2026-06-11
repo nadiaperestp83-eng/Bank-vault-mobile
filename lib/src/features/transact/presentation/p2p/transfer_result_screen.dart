@@ -25,8 +25,12 @@ class TransferResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSizes.p32),
@@ -44,11 +48,11 @@ class TransferResultScreen extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 14),
+                style: TextStyle(color: secondaryTextColor, fontSize: 14),
               ),
               if (isSuccess) ...[
                 const SizedBox(height: 48),
-                _buildTransactionSummary(),
+                _buildTransactionSummary(secondaryTextColor, isDark),
               ],
               const Spacer(),
               _buildDoneButton(context),
@@ -75,11 +79,11 @@ class TransferResultScreen extends StatelessWidget {
     ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack).shake(delay: 500.ms);
   }
 
-  Widget _buildTransactionSummary() {
+  Widget _buildTransactionSummary(Color secondaryTextColor, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: isDark ? AppColors.darkSurface : AppColors.backgroundLight,
         borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
@@ -87,7 +91,7 @@ class TransferResultScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Recipient', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              Text('Recipient', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
               Text('${recipient.firstName} ${recipient.lastName}', style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
@@ -95,7 +99,7 @@ class TransferResultScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Amount', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              Text('Amount', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
               Text(CurrencyFormatter.format(amount, currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
             ],
           ),

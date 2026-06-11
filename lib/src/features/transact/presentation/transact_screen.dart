@@ -101,6 +101,11 @@ class _TransactScreenState extends State<TransactScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
+
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) async {
         if (state is TransactionSuccess) {
@@ -138,7 +143,7 @@ class _TransactScreenState extends State<TransactScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
@@ -146,11 +151,11 @@ class _TransactScreenState extends State<TransactScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 64), // Space for VaultTopNav
-                _buildModeToggle(),
+                _buildModeToggle(isDark, surfaceColor),
                 const SizedBox(height: 32),
-                _buildActiveSection(),
+                _buildActiveSection(isDark, surfaceColor, borderColor),
                 const SizedBox(height: 40),
-                _buildTransactionHistory(),
+                _buildTransactionHistory(isDark, borderColor),
                 const SizedBox(height: 100), // Space for bottom dock
               ],
             ),
@@ -160,7 +165,7 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildModeToggle() {
+  Widget _buildModeToggle(bool isDark, Color surfaceColor) {
     return Center(
       child: GlassCard(
         padding: const EdgeInsets.all(6),
@@ -168,16 +173,16 @@ class _TransactScreenState extends State<TransactScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _toggleItem(0, 'Send'),
-            _toggleItem(1, 'Deposit'),
-            _toggleItem(2, 'Withdraw'),
+            _toggleItem(0, 'Send', isDark),
+            _toggleItem(1, 'Deposit', isDark),
+            _toggleItem(2, 'Withdraw', isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _toggleItem(int index, String label) {
+  Widget _toggleItem(int index, String label, bool isDark) {
     bool isActive = _activeTab == index;
     return GestureDetector(
       onTap: () => setState(() => _activeTab = index),
@@ -190,7 +195,7 @@ class _TransactScreenState extends State<TransactScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : AppColors.textSecondaryLight,
+            color: isActive ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
             fontWeight: FontWeight.bold,
             fontSize: 13,
           ),
@@ -199,21 +204,21 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildActiveSection() {
+  Widget _buildActiveSection(bool isDark, Color surfaceColor, Color borderColor) {
     switch (_activeTab) {
       case 0:
-        return _buildSendSection();
+        return _buildSendSection(isDark, surfaceColor, borderColor);
       case 1:
-        return _buildDepositSection();
+        return _buildDepositSection(isDark, surfaceColor, borderColor);
       case 2:
-        return _buildWithdrawSection();
+        return _buildWithdrawSection(isDark, surfaceColor, borderColor);
       default:
         return const SizedBox();
     }
   }
 
   // --- SEND SECTION ---
-  Widget _buildSendSection() {
+  Widget _buildSendSection(bool isDark, Color surfaceColor, Color borderColor) {
     return BlocBuilder<TransactionBloc, TransactionState>(
       builder: (context, state) {
         List<VaultUser> recipients = [];
@@ -230,12 +235,12 @@ class _TransactScreenState extends State<TransactScreen> {
               children: [
                 GestureDetector(
                   onTap: () => context.go('/transact/p2p'),
-                  child: _buildProviderCard(LucideIcons.user, 'Vault User', true),
+                  child: _buildProviderCard(LucideIcons.user, 'Vault User', true, isDark, surfaceColor, borderColor),
                 ),
                 const SizedBox(width: 12),
-                _buildProviderCard(LucideIcons.landmark, 'Bank', false),
+                _buildProviderCard(LucideIcons.landmark, 'Bank', false, isDark, surfaceColor, borderColor),
                 const SizedBox(width: 12),
-                _buildProviderCard(LucideIcons.smartphone, 'Mobile Money', false),
+                _buildProviderCard(LucideIcons.smartphone, 'Mobile Money', false, isDark, surfaceColor, borderColor),
               ],
             ),
             const SizedBox(height: 32),
@@ -261,14 +266,14 @@ class _TransactScreenState extends State<TransactScreen> {
                 hintText: 'Search by @username or name',
                 prefixIcon: const Icon(LucideIcons.search, size: 20),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: surfaceColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+                  borderSide: BorderSide(color: borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+                  borderSide: BorderSide(color: borderColor),
                 ),
               ),
             ),
@@ -279,7 +284,7 @@ class _TransactScreenState extends State<TransactScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: recipients.length + 1,
                 itemBuilder: (context, index) {
-                  if (index == 0) return _buildContactAvatar('Add', null, isAdd: true);
+                  if (index == 0) return _buildContactAvatar('Add', null, isDark, isAdd: true);
                   final user = recipients[index - 1];
                   final isSelected = _selectedRecipient?.id == user.id;
                   return GestureDetector(
@@ -287,6 +292,7 @@ class _TransactScreenState extends State<TransactScreen> {
                     child: _buildContactAvatar(
                       user.firstName ?? user.kycTag ?? 'User',
                       (user.firstName?[0] ?? '') + (user.lastName?[0] ?? ''),
+                      isDark,
                       isSelected: isSelected,
                     ),
                   );
@@ -294,7 +300,7 @@ class _TransactScreenState extends State<TransactScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            _buildAmountCard('Send Amount'),
+            _buildAmountCard('Send Amount', isDark, surfaceColor, borderColor),
             const SizedBox(height: 32),
             _buildActionBtn('Send Now'),
           ],
@@ -303,22 +309,22 @@ class _TransactScreenState extends State<TransactScreen> {
     ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildProviderCard(IconData icon, String label, bool isSelected) {
+  Widget _buildProviderCard(IconData icon, String label, bool isSelected, bool isDark, Color surfaceColor, Color borderColor) {
     return Expanded(
       child: Container(
         height: 100,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05),
+            color: isSelected ? AppColors.primary : borderColor,
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight, size: 24),
+            Icon(icon, color: isSelected ? AppColors.primary : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight), size: 24),
             const SizedBox(height: 8),
             Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ],
@@ -327,7 +333,7 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildContactAvatar(String name, String? initials, {bool isAdd = false, bool isSelected = false}) {
+  Widget _buildContactAvatar(String name, String? initials, bool isDark, {bool isAdd = false, bool isSelected = false}) {
     return Container(
       margin: const EdgeInsets.only(right: 20),
       child: Column(
@@ -343,10 +349,10 @@ class _TransactScreenState extends State<TransactScreen> {
             ),
             child: CircleAvatar(
               radius: 28,
-              backgroundColor: isAdd ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+              backgroundColor: isAdd ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1)),
               child: isAdd 
                   ? const Icon(LucideIcons.plus, color: AppColors.primary)
-                  : Text(initials ?? '??', style: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
+                  : Text(initials ?? '??', style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(height: 8),
@@ -357,7 +363,7 @@ class _TransactScreenState extends State<TransactScreen> {
   }
 
   // --- DEPOSIT SECTION ---
-  Widget _buildDepositSection() {
+  Widget _buildDepositSection(bool isDark, Color surfaceColor, Color borderColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -375,10 +381,10 @@ class _TransactScreenState extends State<TransactScreen> {
         const SizedBox(height: 40),
         const Text('Funding History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
-        const Center(
+        Center(
           child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Text('No recent funding actions', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+            padding: const EdgeInsets.all(20),
+            child: Text('No recent funding actions', style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 12)),
           ),
         ),
       ],
@@ -417,7 +423,7 @@ class _TransactScreenState extends State<TransactScreen> {
   }
 
   // --- WITHDRAW SECTION ---
-  Widget _buildWithdrawSection() {
+  Widget _buildWithdrawSection(bool isDark, Color surfaceColor, Color borderColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -425,39 +431,39 @@ class _TransactScreenState extends State<TransactScreen> {
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () => context.go('/transact/withdraw'),
-          child: _buildChannelSelector(),
+          child: _buildChannelSelector(isDark, surfaceColor, borderColor),
         ),
         const SizedBox(height: 32),
-        _buildAmountCard('Withdraw Amount'),
+        _buildAmountCard('Withdraw Amount', isDark, surfaceColor, borderColor),
         const SizedBox(height: 32),
-        _buildSummaryFees(),
+        _buildSummaryFees(isDark, surfaceColor, borderColor),
         const SizedBox(height: 32),
         _buildActionBtn('Confirm Withdrawal'),
       ],
     ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildChannelSelector() {
+  Widget _buildChannelSelector(bool isDark, Color surfaceColor, Color borderColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: borderColor),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(LucideIcons.building, color: AppColors.textSecondaryLight, size: 20),
-          SizedBox(width: 12),
-          Text('Select Bank / Account', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 14)),
-          Spacer(),
-          Icon(LucideIcons.chevronDown, color: AppColors.textSecondaryLight, size: 18),
+          Icon(LucideIcons.building, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, size: 20),
+          const SizedBox(width: 12),
+          Text('Select Bank / Account', style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 14)),
+          const Spacer(),
+          Icon(LucideIcons.chevronDown, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, size: 18),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryFees() {
+  Widget _buildSummaryFees(bool isDark, Color surfaceColor, Color borderColor) {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final fee = amount * 0.01; // 1%
     final total = amount + fee;
@@ -465,33 +471,33 @@ class _TransactScreenState extends State<TransactScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         children: [
-          _summaryRow('Withdrawal Amount', CurrencyFormatter.format(amount, _selectedCurrency)),
+          _summaryRow('Withdrawal Amount', CurrencyFormatter.format(amount, _selectedCurrency), isDark),
           const SizedBox(height: 12),
-          _summaryRow('Platform Fee', CurrencyFormatter.format(fee, _selectedCurrency), isRed: true),
+          _summaryRow('Platform Fee', CurrencyFormatter.format(fee, _selectedCurrency), isDark, isRed: true),
           const Divider(height: 32),
-          _summaryRow('Total Deduction', CurrencyFormatter.format(total, _selectedCurrency), isBold: true),
+          _summaryRow('Total Deduction', CurrencyFormatter.format(total, _selectedCurrency), isDark, isBold: true),
         ],
       ),
     );
   }
 
-  Widget _summaryRow(String label, String value, {bool isRed = false, bool isBold = false}) {
+  Widget _summaryRow(String label, String value, bool isDark, {bool isRed = false, bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+        Text(label, style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
         Text(
           value,
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isRed ? Colors.red : AppColors.textPrimaryLight,
+            color: isRed ? Colors.red : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
           ),
         ),
       ],
@@ -499,13 +505,13 @@ class _TransactScreenState extends State<TransactScreen> {
   }
 
   // --- SHARED WIDGETS ---
-  Widget _buildAmountCard(String label) {
+  Widget _buildAmountCard(String label, bool isDark, Color surfaceColor, Color borderColor) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,7 +519,7 @@ class _TransactScreenState extends State<TransactScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              Text(label, style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 13)),
               Text('Balance: ${CurrencyFormatter.format(_currentWallet?.balance ?? 0.0, _currentWallet?.currency ?? 'KES')}', 
                 style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
             ],
@@ -543,12 +549,12 @@ class _TransactScreenState extends State<TransactScreen> {
                   controller: _amountController,
                   keyboardType: TextInputType.number,
                   onChanged: (v) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: '0.00',
-                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[700] : Colors.grey),
                   ),
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                 ),
               ),
             ],
@@ -580,7 +586,7 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildTransactionHistory() {
+  Widget _buildTransactionHistory(bool isDark, Color borderColor) {
     return FutureBuilder<List<VaultTransaction>>(
       future: context.read<TransactionBloc>().transactionService.getTransactionHistory(),
       builder: (context, snapshot) {
@@ -592,11 +598,11 @@ class _TransactScreenState extends State<TransactScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Transaction Ledger', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                Icon(LucideIcons.search, size: 18, color: Colors.black.withValues(alpha: 0.4)),
+                Icon(LucideIcons.search, size: 18, color: isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.4)),
               ],
             ),
             const SizedBox(height: 20),
-            _buildFilters(),
+            _buildFilters(isDark, borderColor),
             const SizedBox(height: 24),
             if (snapshot.connectionState == ConnectionState.waiting)
               const Center(child: CircularProgressIndicator())
@@ -624,7 +630,7 @@ class _TransactScreenState extends State<TransactScreen> {
                             const SizedBox(height: 4),
                             Text(
                               '${tx.createdAt.day}/${tx.createdAt.month} ${tx.createdAt.hour}:${tx.createdAt.minute.toString().padLeft(2, '0')}', 
-                              style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 11)
+                              style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 11)
                             ),
                           ],
                         ),
@@ -642,7 +648,7 @@ class _TransactScreenState extends State<TransactScreen> {
                           ),
                           if (tx.recordedBalance != null)
                             Text(CurrencyFormatter.format(tx.recordedBalance!, tx.currency), 
-                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondaryLight)),
+                              style: TextStyle(fontSize: 10, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
                         ],
                       ),
                     ],
@@ -655,7 +661,7 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(bool isDark, Color borderColor) {
     final filters = ['All', 'Transfers', 'Deposits', 'Withdrawals'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -670,15 +676,15 @@ class _TransactScreenState extends State<TransactScreen> {
               onSelected: (v) {},
               selectedColor: AppColors.primary,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textSecondaryLight,
+                color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              backgroundColor: Colors.white,
+              backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: isSelected ? Colors.transparent : Colors.black.withValues(alpha: 0.05)),
+                side: BorderSide(color: isSelected ? Colors.transparent : borderColor),
               ),
             ),
           );

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../../models/vault_models.dart';
+import '../../../../models/receipt_model.dart';
 
 abstract class DashboardState extends Equatable {
   @override
@@ -16,6 +17,7 @@ class DashboardLoaded extends DashboardState {
   final List<VaultTransaction> transactions;
   final Map<String, dynamic> growthData;
   final List<VaultNotification> notifications;
+  final List<VaultReceipt> receipts;
   final List<VaultUser> frequentContacts;
   final List<VaultUser> suggestedUsers;
   final String? latestInsight;
@@ -27,6 +29,7 @@ class DashboardLoaded extends DashboardState {
     required this.transactions,
     required this.growthData,
     required this.notifications,
+    required this.receipts,
     required this.frequentContacts,
     required this.suggestedUsers,
     required this.currencyRates,
@@ -40,6 +43,7 @@ class DashboardLoaded extends DashboardState {
         transactions,
         growthData,
         notifications,
+        receipts,
         frequentContacts,
         suggestedUsers,
         latestInsight,

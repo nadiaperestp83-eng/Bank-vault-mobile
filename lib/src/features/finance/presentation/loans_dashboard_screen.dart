@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
+import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:vault_os/src/features/finance/presentation/widgets/finance_ledger.dart';
 import 'package:vault_os/src/features/finance/presentation/widgets/payment_source_selector.dart';
 
@@ -18,74 +21,177 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft, color: AppColors.textPrimaryLight),
+          icon: Icon(LucideIcons.chevronLeft, color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Credit Line', style: TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Credit Line', 
+          style: TextStyle(
+            color: theme.colorScheme.onSurface, 
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSizes.p20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildLoanRequestSection(),
-            const SizedBox(height: 24),
-            _buildEligibilityGuard(),
-            const SizedBox(height: 24),
-            _buildRepaymentTracker(),
-            const SizedBox(height: 32),
-            const FinanceLedger(
-              transactions: [
-                {'date': 'Jun 1', 'source': 'Vault Loan', 'type': 'Disbursement', 'amount': '+ KES 50,000'},
-                {'date': 'Jun 8', 'source': 'M-Pesa', 'type': 'Repayment', 'amount': '- KES 5,450'},
+      body: Stack(
+        children: [
+          if (isDark) _buildAuroraGlows(),
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 110),
+                
+                _buildHeader(context),
+                const SizedBox(height: 24),
+
+                _buildEligibilityGuard(context),
+                const SizedBox(height: 24),
+                
+                _buildLoanRequestSection(context),
+                const SizedBox(height: 24),
+                
+                _buildRepaymentTracker(context),
+                const SizedBox(height: 32),
+                
+                Text(
+                  'CREDIT HISTORY',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                const FinanceLedger(
+                  transactions: [
+                    {'date': 'Jun 1', 'source': 'Vault Loan', 'type': 'Disbursement', 'amount': '+ KES 50,000'},
+                    {'date': 'Jun 8', 'source': 'M-Pesa', 'type': 'Repayment', 'amount': '- KES 5,450'},
+                  ],
+                ),
+                const SizedBox(height: 120),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildLoanRequestSection() {
+  Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Capital Access',
+          style: GoogleFonts.dmSerifDisplay(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ).animate().fadeIn().slideX(begin: -0.1, end: 0),
+        const SizedBox(height: 4),
+        Text(
+          'Low-interest liquidity backed by your assets.',
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ).animate().fadeIn(delay: 100.ms),
+      ],
+    );
+  }
+
+  Widget _buildAuroraGlows() {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFF6366F1).withValues(alpha: 0.08),
+                  const Color(0xFF6366F1).withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoanRequestSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Request New Loan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 20),
-          // Amount Input
+          const Text('New Credit Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 24),
+          
+          Text('DESIRED AMOUNT', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.05),
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
             ),
-            child: const TextField(
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                prefixText: 'KES ',
-                prefixStyle: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
-                hintText: '0.00',
-              ),
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                Text('KES', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 18)),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0.00',
+                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -1),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Period Selector
-          const Text('Repayment Period', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight)),
+          const SizedBox(height: 24),
+          
+          Text('REPAYMENT WINDOW', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -94,20 +200,21 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
                 bool isSelected = _selectedPeriod == period;
                 return GestureDetector(
                   onTap: () => setState(() => _selectedPeriod = period),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: AnimatedContainer(
+                    duration: 200.ms,
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF334155) : Colors.transparent,
+                      color: isSelected ? const Color(0xFF6366F1) : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isSelected ? const Color(0xFF334155) : Colors.black.withValues(alpha: 0.1)),
+                      border: Border.all(color: isSelected ? const Color(0xFF6366F1) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
                     ),
                     child: Text(
                       period,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppColors.textSecondaryLight,
+                        color: isSelected ? Colors.white : (isDark ? Colors.white60 : Colors.black54),
                       ),
                     ),
                   ),
@@ -115,67 +222,73 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 24),
-          // Summary Box
+          const SizedBox(height: 28),
+          
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF334155).withValues(alpha: 0.03),
+              color: const Color(0xFF6366F1).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.05)),
+              border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSummaryItem('Principal', '50,000'),
-                _buildSummaryItem('Interest', '2,500', color: Colors.green),
-                _buildSummaryItem('Fees', '0'),
-                _buildSummaryItem('Total', '52,500', isBold: true),
+                _buildSummaryItem(context, 'Principal', '50,000'),
+                _buildSummaryItem(context, 'Interest (5%)', '2,500', color: Colors.green),
+                _buildSummaryItem(context, 'Total Due', '52,500', isBold: true),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF334155),
+              backgroundColor: const Color(0xFF6366F1),
               foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 56),
+              minimumSize: const Size(double.infinity, 64),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 0,
+              elevation: 8,
+              shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.3),
             ),
-            child: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.zap, size: 20),
+                SizedBox(width: 10),
+                Text('Instant Disbursement', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, {Color? color, bool isBold = false}) {
+  Widget _buildSummaryItem(BuildContext context, String label, String value, {Color? color, bool isBold = false}) {
+    final theme = Theme.of(context);
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textSecondaryLight)),
-        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        const SizedBox(height: 6),
         Text(
           value,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: color ?? AppColors.textPrimaryLight,
+            color: color ?? theme.colorScheme.onSurface,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildEligibilityGuard() {
-    return Container(
+  Widget _buildEligibilityGuard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GlassCard(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -189,22 +302,28 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('Verified', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: const Row(
+                  children: [
+                    Icon(LucideIcons.checkCircle, color: AppColors.primary, size: 10),
+                    SizedBox(width: 4),
+                    Text('SECURE', style: TextStyle(color: AppColors.primary, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          _buildEligibilityItem('Account Age', 'Over 6 Months', true),
-          const SizedBox(height: 12),
-          _buildEligibilityItem('Avg. Deposits', 'KES 15,000+', true),
-          const SizedBox(height: 12),
-          _buildEligibilityItem('Credit Score', 'Good (720)', true),
-          const Divider(height: 32),
+          const SizedBox(height: 24),
+          _buildEligibilityItem('Trust Score', '720 (High)', true),
+          const SizedBox(height: 14),
+          _buildEligibilityItem('Collateral Ratio', '1:1.5 Coverage', true),
+          const SizedBox(height: 14),
+          _buildEligibilityItem('Repayment Health', 'Excellent', true),
+          const Divider(height: 40),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Max Limit', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
-              const Text('KES 150,000', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+              const Text('MAX CREDIT LIMIT', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              Text('KES 150,000', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: theme.colorScheme.primary)),
             ],
           ),
         ],
@@ -215,81 +334,98 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
   Widget _buildEligibilityItem(String label, String value, bool isMet) {
     return Row(
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isMet ? AppColors.primary : Colors.grey.withValues(alpha: 0.3),
-            boxShadow: isMet ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.5), blurRadius: 8)] : null,
-          ),
-        ),
+        Icon(isMet ? LucideIcons.shieldCheck : LucideIcons.circle, color: isMet ? AppColors.primary : Colors.grey, size: 16),
         const SizedBox(width: 12),
         Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         const Spacer(),
-        Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
+        Text(value, style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildRepaymentTracker() {
+  Widget _buildRepaymentTracker(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF334155), const Color(0xFF1E293B)],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Active Loan Tracker', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 24),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(LucideIcons.activity, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text('Active Tracker', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Repayment Progress', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              const Text('45%', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const Text('REPAYMENT PROGRESS', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              const Text('45%', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: const LinearProgressIndicator(
               value: 0.45,
-              minHeight: 6,
+              minHeight: 10,
               backgroundColor: Colors.white10,
               valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildTrackerMetric('Original Amount', 'KES 50,000'),
-              _buildTrackerMetric('Repaid', 'KES 22,500'),
-              _buildTrackerMetric('Due Date', 'Jul 15'),
+              _buildTrackerMetric('REMAINING', 'KES 30,000'),
+              _buildTrackerMetric('NEXT DUE', '15 JUL'),
+              _buildTrackerMetric('INSTALMENT', 'KES 5,450'),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: () => PaymentSourceSelector.show(context, 'Repay Loan', (source) {
+            onPressed: () => PaymentSourceSelector.show(context, 'Repay Credit Line', (source) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Repayment initiated via $source')),
+                SnackBar(
+                  content: Text('Repayment processed via $source'),
+                  backgroundColor: AppColors.success,
+                ),
               );
             }),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.1),
               foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
+              minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
               elevation: 0,
             ),
-            child: const Text('Repay Now', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Execute Repayment', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -300,8 +436,8 @@ class _LoansDashboardScreenState extends State<LoansDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10)),
-        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        const SizedBox(height: 6),
         Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
       ],
     );

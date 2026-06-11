@@ -46,6 +46,13 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
+
     final fee = widget.amount * 0.01;
     final total = widget.amount + fee;
 
@@ -75,13 +82,13 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
       child: Stack(
         children: [
           Scaffold(
-            backgroundColor: AppColors.backgroundLight,
+            backgroundColor: theme.scaffoldBackgroundColor,
             appBar: AppBar(
               title: const Text('Review Withdrawal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+                icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -90,11 +97,11 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSummaryCard(fee, total),
+                  _buildSummaryCard(fee, total, secondaryTextColor, primaryTextColor, surfaceColor, borderColor),
                   const SizedBox(height: 32),
                   const Text('Destination', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 16),
-                  _buildDestinationCard(),
+                  _buildDestinationCard(secondaryTextColor, surfaceColor, borderColor),
                   const Spacer(),
                   _buildConfirmButton(),
                 ],
@@ -107,13 +114,13 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
     );
   }
 
-  Widget _buildSummaryCard(double fee, double total) {
+  Widget _buildSummaryCard(double fee, double total, Color secondaryTextColor, Color primaryTextColor, Color surfaceColor, Color borderColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -124,48 +131,48 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
       ),
       child: Column(
         children: [
-          const Text('Total Deduction', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+          Text('Total Deduction', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
           const SizedBox(height: 8),
           Text(
             CurrencyFormatter.format(total, 'USD'),
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryTextColor),
           ),
           const Divider(height: 48),
-          _summaryRow('Withdrawal Amount', CurrencyFormatter.format(widget.amount, 'USD')),
+          _summaryRow('Withdrawal Amount', CurrencyFormatter.format(widget.amount, 'USD'), secondaryTextColor, primaryTextColor),
           const SizedBox(height: 16),
-          _summaryRow('Platform Fee (1%)', CurrencyFormatter.format(fee, 'USD'), isRed: true),
+          _summaryRow('Platform Fee (1%)', CurrencyFormatter.format(fee, 'USD'), secondaryTextColor, primaryTextColor, isRed: true),
         ],
       ),
     ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
   }
 
-  Widget _summaryRow(String label, String value, {bool isRed = false}) {
+  Widget _summaryRow(String label, String value, Color secondaryTextColor, Color primaryTextColor, {bool isRed = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textSecondaryLight)),
+        Text(label, style: TextStyle(fontSize: 14, color: secondaryTextColor)),
         Text(
           value,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: isRed ? Colors.red : AppColors.textPrimaryLight,
+            color: isRed ? Colors.red : primaryTextColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDestinationCard() {
+  Widget _buildDestinationCard(Color secondaryTextColor, Color surfaceColor, Color borderColor) {
     final provider = widget.details['provider'];
     final account = widget.details['accountNumber'] ?? widget.details['phoneNumber'];
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
@@ -186,7 +193,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(provider.toString().toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(account.toString(), style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+              Text(account.toString(), style: TextStyle(color: secondaryTextColor, fontSize: 12)),
             ],
           ),
         ],

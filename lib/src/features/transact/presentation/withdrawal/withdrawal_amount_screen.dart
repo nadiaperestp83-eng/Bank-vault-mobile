@@ -52,17 +52,21 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final kesEquivalent = amount * _exchangeRate;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Withdraw Funds', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+          icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -71,13 +75,13 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
         child: Column(
           children: [
             const SizedBox(height: 32),
-            const Text('Enter Withdrawal Amount', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+            Text('Enter Withdrawal Amount', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
             const SizedBox(height: 16),
-            _buildAmountInput(),
+            _buildAmountInput(primaryTextColor, isDark),
             const SizedBox(height: 24),
             _buildEquivalentBox(kesEquivalent),
             const SizedBox(height: 48),
-            _buildBalanceInfo(),
+            _buildBalanceInfo(secondaryTextColor, isDark),
             const SizedBox(height: 48),
             _buildNextButton(),
           ],
@@ -86,19 +90,19 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
     );
   }
 
-  Widget _buildAmountInput() {
+  Widget _buildAmountInput(Color primaryTextColor, bool isDark) {
     return TextField(
       controller: _amountController,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textAlign: TextAlign.center,
-      style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
+      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: primaryTextColor),
       onChanged: (v) => setState(() {}),
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: '0.00',
         border: InputBorder.none,
-        hintStyle: TextStyle(color: Colors.grey),
+        hintStyle: TextStyle(color: isDark ? Colors.grey[700] : Colors.grey),
         prefixText: '\$ ',
-        prefixStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey),
+        prefixStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[700] : Colors.grey),
       ),
       autofocus: true,
     );
@@ -119,22 +123,22 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
     ).animate().fadeIn().scale();
   }
 
-  Widget _buildBalanceInfo() {
+  Widget _buildBalanceInfo(Color secondaryTextColor, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(LucideIcons.wallet, size: 16, color: AppColors.textSecondaryLight),
+          Icon(LucideIcons.wallet, size: 16, color: secondaryTextColor),
           const SizedBox(width: 8),
           Text(
             'Available: ${CurrencyFormatter.format(_currentWallet?.balance ?? 0.0, _currentWallet?.currency ?? 'KES')}',
-            style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(color: secondaryTextColor, fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),

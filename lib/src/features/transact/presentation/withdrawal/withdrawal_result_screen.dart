@@ -22,8 +22,12 @@ class WithdrawalResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSizes.p32),
@@ -41,11 +45,11 @@ class WithdrawalResultScreen extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 14),
+                style: TextStyle(color: secondaryTextColor, fontSize: 14),
               ),
               if (isSuccess) ...[
                 const SizedBox(height: 48),
-                _buildTransactionSummary(),
+                _buildTransactionSummary(secondaryTextColor, isDark),
               ],
               const Spacer(),
               _buildDoneButton(context),
@@ -72,7 +76,7 @@ class WithdrawalResultScreen extends StatelessWidget {
     ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack).shake(delay: 500.ms);
   }
 
-  Widget _buildTransactionSummary() {
+  Widget _buildTransactionSummary(Color secondaryTextColor, bool isDark) {
     final provider = details['provider'];
     final account = details['accountNumber'] ?? details['phoneNumber'];
     final reference = 'WTH-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
@@ -80,28 +84,28 @@ class WithdrawalResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: isDark ? AppColors.darkSurface : AppColors.backgroundLight,
         borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
         children: [
-          _summaryRow('Reference', reference),
+          _summaryRow('Reference', reference, secondaryTextColor),
           const SizedBox(height: 12),
-          _summaryRow('Destination', provider.toString().toUpperCase()),
+          _summaryRow('Destination', provider.toString().toUpperCase(), secondaryTextColor),
           const SizedBox(height: 12),
-          _summaryRow('Account/Phone', account.toString()),
+          _summaryRow('Account/Phone', account.toString(), secondaryTextColor),
           const Divider(height: 32),
-          _summaryRow('Amount', CurrencyFormatter.format(amount, 'USD'), isBold: true),
+          _summaryRow('Amount', CurrencyFormatter.format(amount, 'USD'), secondaryTextColor, isBold: true),
         ],
       ),
     ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1, end: 0);
   }
 
-  Widget _summaryRow(String label, String value, {bool isBold = false}) {
+  Widget _summaryRow(String label, String value, Color secondaryTextColor, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+        Text(label, style: TextStyle(color: secondaryTextColor, fontSize: 13)),
         Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, fontSize: isBold ? 16 : 14)),
       ],
     );

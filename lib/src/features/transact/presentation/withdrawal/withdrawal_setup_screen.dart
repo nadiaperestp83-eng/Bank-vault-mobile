@@ -79,14 +79,21 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Bank & Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimaryLight),
+          icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -97,11 +104,11 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
           children: [
             const Text('Choose Channel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 16),
-            _buildChannelSelector(),
+            _buildChannelSelector(isDark, surfaceColor, borderColor),
             const SizedBox(height: 32),
             const Text('Destination Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 16),
-            if (_channel == 'bank') _buildBankForm() else _buildMobileForm(),
+            if (_channel == 'bank') _buildBankForm(secondaryTextColor, surfaceColor, borderColor) else _buildMobileForm(secondaryTextColor, surfaceColor, borderColor),
             const SizedBox(height: 48),
             _buildNextButton(),
           ],
@@ -110,18 +117,19 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
     );
   }
 
-  Widget _buildChannelSelector() {
+  Widget _buildChannelSelector(bool isDark, Color surfaceColor, Color borderColor) {
     return Row(
       children: [
-        _channelChip('Bank Account', 'bank', LucideIcons.building),
+        _channelChip('Bank Account', 'bank', LucideIcons.building, isDark, surfaceColor, borderColor),
         const SizedBox(width: 12),
-        _channelChip('Mobile Money', 'mobile', LucideIcons.smartphone),
+        _channelChip('Mobile Money', 'mobile', LucideIcons.smartphone, isDark, surfaceColor, borderColor),
       ],
     );
   }
 
-  Widget _channelChip(String label, String value, IconData icon) {
+  Widget _channelChip(String label, String value, IconData icon, bool isDark, Color surfaceColor, Color borderColor) {
     bool isSelected = _channel == value;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() {
@@ -131,18 +139,18 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.white,
+            color: isSelected ? AppColors.primary : surfaceColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.05)),
+            border: Border.all(color: isSelected ? AppColors.primary : borderColor),
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? Colors.white : AppColors.textSecondaryLight, size: 24),
+              Icon(icon, color: isSelected ? Colors.white : secondaryTextColor, size: 24),
               const SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondaryLight,
+                  color: isSelected ? Colors.white : secondaryTextColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -154,7 +162,7 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
     );
   }
 
-  Widget _buildBankForm() {
+  Widget _buildBankForm(Color secondaryTextColor, Color surfaceColor, Color borderColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -163,6 +171,9 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
           value: _selectedProvider,
           items: _banks.map((b) => DropdownMenuItem(value: b['id'], child: Text(b['name']!))).toList(),
           onChanged: (v) => setState(() => _selectedProvider = v),
+          secondaryTextColor: secondaryTextColor,
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
         ),
         const SizedBox(height: 20),
         _buildTextField(
@@ -170,18 +181,24 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
           controller: _accountNumberController,
           hint: 'Enter bank account number',
           keyboardType: TextInputType.number,
+          secondaryTextColor: secondaryTextColor,
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
         ),
         const SizedBox(height: 20),
         _buildTextField(
           label: 'Account Holder Name',
           controller: _accountNameController,
           hint: 'Enter name as it appears on bank',
+          secondaryTextColor: secondaryTextColor,
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
         ),
       ],
     ).animate().fadeIn();
   }
 
-  Widget _buildMobileForm() {
+  Widget _buildMobileForm(Color secondaryTextColor, Color surfaceColor, Color borderColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -190,6 +207,9 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
           value: _selectedProvider,
           items: _mobileProviders.map((p) => DropdownMenuItem(value: p['id'], child: Text(p['name']!))).toList(),
           onChanged: (v) => setState(() => _selectedProvider = v),
+          secondaryTextColor: secondaryTextColor,
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
         ),
         const SizedBox(height: 20),
         _buildTextField(
@@ -197,6 +217,9 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
           controller: _phoneController,
           hint: 'Enter mobile number',
           keyboardType: TextInputType.phone,
+          secondaryTextColor: secondaryTextColor,
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
         ),
       ],
     ).animate().fadeIn();
@@ -207,18 +230,21 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
     required String? value,
     required List<DropdownMenuItem<String>> items,
     required Function(String?) onChanged,
+    required Color secondaryTextColor,
+    required Color surfaceColor,
+    required Color borderColor,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: secondaryTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: surfaceColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+            border: Border.all(color: borderColor),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -240,11 +266,14 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
     required TextEditingController controller,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
+    required Color secondaryTextColor,
+    required Color surfaceColor,
+    required Color borderColor,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: secondaryTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
         TextField(
           controller: controller,
@@ -254,14 +283,14 @@ class _WithdrawalSetupScreenState extends State<WithdrawalSetupScreen> {
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: surfaceColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+              borderSide: BorderSide(color: borderColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+              borderSide: BorderSide(color: borderColor),
             ),
           ),
         ),

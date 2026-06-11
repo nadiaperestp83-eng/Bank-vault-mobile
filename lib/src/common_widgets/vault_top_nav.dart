@@ -16,6 +16,7 @@ import 'package:vault_os/src/models/receipt_model.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vault_os/src/common_widgets/vault_logo.dart';
 
 class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   const VaultTopNav({super.key});
@@ -56,8 +57,6 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 const Spacer(),
                 
                 // Right Section: Interaction Hub
-                _buildGreeting(context, ref),
-                const SizedBox(width: AppSizes.p12),
                 _buildInteractionHub(context, ref),
               ],
             ),
@@ -68,7 +67,6 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   Widget _buildLogo(BuildContext context, VaultAuthState authState) {
-    final theme = Theme.of(context);
     final currentPath = GoRouterState.of(context).uri.path;
     final isLanding = currentPath == '/login' || currentPath == '/signup';
 
@@ -81,89 +79,7 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           context.go('/');
         }
       },
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'V',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -1,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGreeting(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final hour = DateTime.now().hour;
-    final profileAsync = ref.watch(profileStreamProvider);
-    String greeting;
-    String emoji;
-
-    if (hour < 12) {
-      greeting = 'Good Morning';
-      emoji = '🌅';
-    } else if (hour < 17) {
-      greeting = 'Good Afternoon';
-      emoji = '☀️';
-    } else {
-      greeting = 'Good Evening';
-      emoji = '🌙';
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (MediaQuery.of(context).size.width < 450) return const SizedBox.shrink();
-        
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '$greeting, $emoji',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            profileAsync.maybeWhen(
-              data: (profile) => Text(
-                profile?.firstName ?? 'Vault User',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              orElse: () => Text(
-                'Loading...',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      child: const VaultLogo(),
     );
   }
 
@@ -186,19 +102,23 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
           hasGlow: true,
         ),
         const SizedBox(width: 10),
-        _buildNavButton(
-          context: context,
-          icon: LucideIcons.receiptText,
-          onTap: () {
-            HapticFeedback.lightImpact();
-            _showReceiptSheet(context, ref);
-          },
-        ),
+        _buildReceiptButton(context, ref),
         const SizedBox(width: 10),
         _buildNotificationButton(context, ref),
         const SizedBox(width: 10),
         _buildProfileTrigger(context, ref),
       ],
+    );
+  }
+
+  Widget _buildReceiptButton(BuildContext context, WidgetRef ref) {
+    return _buildNavButton(
+      context: context,
+      icon: LucideIcons.receiptText,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showReceiptSheet(context, ref);
+      },
     );
   }
 
@@ -488,8 +408,146 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
   void _showReceiptSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => const Center(child: Text('Receipt Sheet')),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(AppSizes.p20),
+                child: Row(
+                  children: [
+                    Text(
+                      'Receipt History',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final receiptsAsync = ref.watch(receiptsStreamProvider);
+                    
+                    return receiptsAsync.when(
+                      data: (receipts) {
+                        if (receipts.isEmpty) {
+                          return const Center(child: Text('No receipts found'));
+                        }
+
+                        // Sort by date descending
+                        final sorted = [...receipts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                        return ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final receipt = sorted[index];
+                            return _buildReceiptItem(context, receipt);
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Widget _buildReceiptItem(BuildContext context, VaultReceipt receipt) {
+    final theme = Theme.of(context);
+    final date = DateFormat('MMM d').format(receipt.createdAt);
+    final description = receipt.transactionDetails['description']?.toString() ?? 
+                       (receipt.transactionDetails['type']?.toString().toUpperCase() ?? "TRANSACTION");
+    
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(LucideIcons.fileText, size: 20, color: AppColors.primary),
+      ),
+      title: Text(
+        description,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      subtitle: Text(
+        receipt.receiptNumber,
+        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '${receipt.currency} ${NumberFormat('#,###.00').format(receipt.amount)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            date,
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+          ),
+        ],
+      ),
+      onTap: () {
+        // Show detailed receipt view
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: DigitalReceipt(
+              receipt: receipt,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _downloadReceipt(BuildContext context, VaultReceipt receipt) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Downloading receipt ${receipt.receiptNumber}...')),
+    );
+    
+    // In a real app, this would generate a PDF and save it.
+    // For now, we simulate the delay.
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Receipt ${receipt.receiptNumber} saved to downloads.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
   }
 
   void _showProfileBottomSheet(BuildContext context) {

@@ -72,7 +72,8 @@ class DigitalReceipt extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  receipt.transactionDetails['type']?.toString().toUpperCase() ?? 'TRANSACTION',
+                  receipt.transactionDetails['description']?.toString().toUpperCase() ?? 
+                  (receipt.transactionDetails['type']?.toString().toUpperCase() ?? 'TRANSACTION'),
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.primary,
