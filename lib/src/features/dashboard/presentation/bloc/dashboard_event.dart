@@ -29,3 +29,5 @@ class UpdateReceipts extends DashboardEvent {
   @override
   List<Object?> get props => [receipts];
 }
+
+class RefreshAIInsight extends DashboardEvent {}

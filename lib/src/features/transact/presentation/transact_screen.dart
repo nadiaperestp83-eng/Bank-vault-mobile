@@ -19,6 +19,9 @@ import '../bloc/transaction_event.dart';
 import '../bloc/transaction_state.dart';
 import '../../../models/vault_models.dart';
 
+import 'package:vault_os/src/services/biometric_service.dart';
+import 'package:vault_os/src/services/storage_service.dart';
+
 class TransactScreen extends StatefulWidget {
   const TransactScreen({super.key});
 
@@ -34,6 +37,8 @@ class _TransactScreenState extends State<TransactScreen> {
   final TextEditingController _recipientController = TextEditingController();
   VaultUser? _selectedRecipient;
   final DashboardService _dashboardService = DashboardService();
+  final BiometricService _biometricService = BiometricService();
+  final StorageService _storageService = StorageService();
   Wallet? _currentWallet;
   StreamSubscription? _walletSubscription;
 
@@ -65,10 +70,39 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  void _handleTransaction() {
+  void _handleTransaction() async {
     HapticFeedback.lightImpact();
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) return;
+
+    // For Vault transfers (Tab 0), try biometrics first if enabled
+    if (_activeTab == 0 && _selectedRecipient != null) {
+      final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+      final isBiometricEnabled = await _storageService.isBiometricEnabled();
+
+      if (isBiometricAvailable && isBiometricEnabled) {
+        final authenticated = await _biometricService.authenticate(
+          reason: 'Authenticate to send $_selectedCurrency $amount to ${_selectedRecipient!.firstName ?? _selectedRecipient!.kycTag}',
+        );
+
+        if (authenticated) {
+          final credentials = await _storageService.getCredentials();
+          final storedPin = credentials['pin'];
+
+          if (storedPin != null) {
+            if (mounted) {
+              context.read<TransactionBloc>().add(PerformVaultTransfer(
+                recipientTag: _selectedRecipient!.kycTag!,
+                amount: amount,
+                currency: _selectedCurrency,
+                pin: storedPin,
+              ));
+            }
+            return;
+          }
+        }
+      }
+    }
 
     _showPinSheet((pin) async {
       if (_activeTab == 0) {
@@ -144,6 +178,7 @@ class _TransactScreenState extends State<TransactScreen> {
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
@@ -552,7 +587,7 @@ class _TransactScreenState extends State<TransactScreen> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: '0.00',
-                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[700] : Colors.grey),
+                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.5)),
                   ),
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                 ),

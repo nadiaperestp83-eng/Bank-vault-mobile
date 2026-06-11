@@ -21,10 +21,10 @@ class FinanceLedger extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+              color: isDark ? AppColors.darkBorder : AppColors.lightBorder.withValues(alpha: 0.5),
             ),
           ),
           child: Column(
@@ -33,7 +33,7 @@ class FinanceLedger extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
+                  color: isDark ? Colors.white.withValues(alpha: 0.01) : Colors.black.withValues(alpha: 0.01),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Row(
@@ -53,7 +53,7 @@ class FinanceLedger extends StatelessWidget {
                 separatorBuilder: (context, index) => Divider(
                   height: 1, 
                   thickness: 0.5, 
-                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                 ),
                 itemBuilder: (context, index) {
                   final tx = transactions[index];

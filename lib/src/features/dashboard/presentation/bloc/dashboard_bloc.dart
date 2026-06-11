@@ -19,6 +19,33 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<UpdateWallet>(_onUpdateWallet);
     on<UpdateNotifications>(_onUpdateNotifications);
     on<UpdateReceipts>(_onUpdateReceipts);
+    on<RefreshAIInsight>(_onRefreshAIInsight);
+  }
+
+  Future<void> _onRefreshAIInsight(
+      RefreshAIInsight event, Emitter<DashboardState> emit) async {
+    if (state is DashboardLoaded) {
+      final currentState = state as DashboardLoaded;
+      try {
+        await _dashboardService.triggerFinancialHealthCheck();
+        final freshInsight = await _dashboardService.getLatestFinancialInsight();
+        
+        emit(DashboardLoaded(
+          user: currentState.user,
+          wallet: currentState.wallet,
+          transactions: currentState.transactions,
+          growthData: currentState.growthData,
+          notifications: currentState.notifications,
+          receipts: currentState.receipts,
+          frequentContacts: currentState.frequentContacts,
+          suggestedUsers: currentState.suggestedUsers,
+          latestInsight: freshInsight,
+          currencyRates: currentState.currencyRates,
+        ));
+      } catch (e) {
+        // Option: emit error or just keep old state
+      }
+    }
   }
 
   Future<void> _onLoadDashboardData(

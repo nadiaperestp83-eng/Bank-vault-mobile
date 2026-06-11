@@ -13,6 +13,7 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_even
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_state.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
+import 'package:flutter/services.dart';
 import '../../../models/vault_models.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -44,16 +45,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         listener: (context, state) {
           if (state is DashboardLoaded) {
-            // Module 1: Auth Guard Logic
             if (!state.user.hasPin) {
-              // Redirect to PIN setup if pin_hash is null
-              // context.go('/setup-pin'); 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Please set up your Transaction PIN to continue.')),
               );
             }
 
-            // Real-time Receipt Notification
             if (state.receipts.isNotEmpty) {
               final latestReceipt = state.receipts.first;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +62,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     label: 'View',
                     textColor: Colors.white,
                     onPressed: () {
-                      // Show receipt detail dialog
                       showDialog(
                         context: context,
                         builder: (context) => Dialog(
@@ -79,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             }
           }
-          if (state is AuthError) {
+          if (state is DashboardError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
             );
@@ -105,7 +101,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _buildGreeting(context, state.user),
                         const SizedBox(height: 24),
 
-                        // Module 4: High-priority Warning Banner
                         ...state.notifications
                             .where((n) => n.type == 'warning')
                             .map((n) => _buildWarningBanner(context, n)),
@@ -115,7 +110,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         
                         const SizedBox(height: 24),
                         
-                        // Module 2: Portfolio Summary
                         _buildPortfolioSummaryCard(context, state)
                             .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
                         
@@ -126,19 +120,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         
                         const SizedBox(height: 24),
                         
-                        // Module 2: Growth Chart
                         _buildGrowthChart(context, state.growthData)
                             .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        // Module 5: Quick Send
                         _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
                             .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        // Module 3: Transactions
                         _buildRecentTransactions(context, state.transactions)
                             .animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
                         
@@ -223,41 +214,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAIInsightWidget(BuildContext context, String? insight) {
-    final theme = Theme.of(context);
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSizes.p20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.sparkles, color: theme.colorScheme.primary, size: 18),
-              const SizedBox(width: 12),
-              Text(
-                'AI INSIGHT',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            insight ?? 'Analyzing your financial patterns... Check back soon for pro-active tips!',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
+    return _AIInsightCard(initialInsight: insight);
   }
 
   Widget _buildPortfolioSummaryCard(BuildContext context, DashboardLoaded state) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Module 2: Dual Currency Display
     final primaryBalance = CurrencyFormatter.format(state.wallet.balance, state.wallet.currency);
     final secondaryCurrency = state.wallet.currency == 'USD' ? 'KES' : 'USD';
     final rate = state.currencyRates[secondaryCurrency] ?? 130.0;
@@ -561,7 +524,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(AppSizes.p16),
                 child: Row(
                   children: [
-                    _buildTransactionIcon(tx, isPositive),
+                    _buildTransactionIcon(context, tx, isPositive),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -599,7 +562,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTransactionIcon(VaultTransaction tx, bool isPositive) {
+  Widget _buildTransactionIcon(BuildContext context, VaultTransaction tx, bool isPositive) {
     IconData icon;
     Color color;
     String? logoPath;
@@ -622,6 +585,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       icon = LucideIcons.arrowUpRight;
       color = AppColors.error;
     } else {
+      final theme = Theme.of(context);
       icon = isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight;
       color = isPositive ? AppColors.success : theme.colorScheme.primary;
     }
@@ -703,6 +667,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AIInsightCard extends StatefulWidget {
+  final String? initialInsight;
+  const _AIInsightCard({this.initialInsight});
+
+  @override
+  State<_AIInsightCard> createState() => _AIInsightCardState();
+}
+
+class _AIInsightCardState extends State<_AIInsightCard> with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+
+    setState(() => _isRefreshing = true);
+    _rotationController.repeat();
+    HapticFeedback.lightImpact();
+
+    try {
+      context.read<DashboardBloc>().add(RefreshAIInsight());
+      await Future.delayed(const Duration(milliseconds: 1200));
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+        _rotationController.stop();
+        _rotationController.reset();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        final insight = state is DashboardLoaded ? state.latestInsight : widget.initialInsight;
+
+        return GlassCard(
+          padding: const EdgeInsets.all(AppSizes.p20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.sparkles, color: theme.colorScheme.primary, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        'AI INSIGHT',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: _handleRefresh,
+                    child: RotationTransition(
+                      turns: _rotationController,
+                      child: Icon(
+                        LucideIcons.refreshCw,
+                        size: 16,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                insight ?? 'Analyzing your financial patterns... Check back soon for pro-active tips!',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

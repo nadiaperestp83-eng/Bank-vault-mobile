@@ -142,6 +142,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -219,7 +220,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                 decoration: InputDecoration(
                   hintText: '0.00',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: isDark ? Colors.grey[700] : Colors.grey),
+                  hintStyle: TextStyle(color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.5)),
                 ),
                 autofocus: true,
               ),
@@ -234,7 +235,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
       ),
