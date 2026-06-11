@@ -26,7 +26,9 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TransactionService _txService = TransactionService();
-  List<Map<String, dynamic>> _systemAccounts = [];
+  List<BankAccount> _userAccounts = [];
+  BankAccount? _selectedAccount;
+  String? _referenceCode;
   bool _isLoadingAccounts = false;
   VaultUser? _currentUser;
   bool _isAddingNew = false;
@@ -39,20 +41,17 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    if (widget.method == 'bank') {
-      _loadSystemAccounts();
-    }
-    _currentUser = await _txService.getCurrentUserProfile();
-    if (_currentUser?.phoneNumber != null) {
-      _phoneController.text = _currentUser!.phoneNumber!;
-    }
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _loadSystemAccounts() async {
     setState(() => _isLoadingAccounts = true);
     try {
-      _systemAccounts = await _txService.getSystemBankAccounts();
+      if (widget.method == 'bank') {
+        _userAccounts = await _txService.getUserBankAccounts();
+        _systemAccounts = await _txService.getSystemBankAccounts();
+        _referenceCode = _txService.generateReferenceCode();
+      }
+      _currentUser = await _txService.getCurrentUserProfile();
+      if (_currentUser?.phoneNumber != null) {
+        _phoneController.text = _currentUser!.phoneNumber!;
+      }
     } finally {
       if (mounted) setState(() => _isLoadingAccounts = false);
     }
@@ -69,16 +68,9 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) return;
 
-    if (widget.method == 'bank') {
-      // Manual bank transfer just shows info, no RPC execution here usually
-      return;
-    }
-
-    final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
-
-    if (phoneNumber.isEmpty) {
+    if (widget.method == 'bank' && _selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a phone number'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please select or link a bank account'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -89,6 +81,14 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => PinEntrySheet(
         onConfirm: (pin) async {
+          final isPinValid = await _txService.verifyPin(pin);
+          if (!isPinValid) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Invalid Transaction PIN'), backgroundColor: Colors.red),
+            );
+            return;
+          }
+
           if (widget.method == 'mpesa') {
             final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
             if (_isAddingNew && _rememberNumber) {
@@ -107,6 +107,14 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
               currency: 'USD',
               pin: pin,
             ));
+          } else if (widget.method == 'bank') {
+            if (_selectedAccount?.stripeBankAccountId != null) {
+              // Stripe ACH Flow
+              await _txService.createStripeAchIntent(amount: amount, currency: 'USD');
+              if (mounted) Navigator.pop(context);
+            } else {
+              // Manual Bank Transfer logic would normally go here or via "I have sent" button
+            }
           }
         },
       ),
@@ -154,13 +162,12 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.method == 'bank') _buildBankInfo(secondaryTextColor) else ...[
-                _buildAmountInput(secondaryTextColor),
-                const SizedBox(height: 32),
-                if (widget.method == 'mpesa') _buildMpesaField(isDark),
-                const SizedBox(height: 48),
-                _buildActionButton(),
-              ],
+              _buildAmountInput(secondaryTextColor),
+              const SizedBox(height: 32),
+              if (widget.method == 'mpesa') _buildMpesaField(isDark),
+              if (widget.method == 'bank') _buildBankFlow(isDark, secondaryTextColor, primaryTextColor),
+              const SizedBox(height: 48),
+              _buildActionButton(),
             ],
           ),
         ),
@@ -168,145 +175,133 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     );
   }
 
-  Widget _buildAmountInput(Color secondaryTextColor) {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final kesEquivalent = amount * 130.0;
-
-    return GlassCard(
-      child: Column(
-        children: [
-          Text('Enter Amount (USD)', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _amountController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            onChanged: (v) => setState(() {}),
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(hintText: '0.00', border: InputBorder.none),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '≈ ${CurrencyFormatter.format(kesEquivalent, 'KES')}',
-            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMpesaField(bool isDark) {
+  Widget _buildBankFlow(bool isDark, Color secondaryTextColor, Color primaryTextColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('M-Pesa Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            TextButton.icon(
-              onPressed: () => setState(() => _isAddingNew = !_isAddingNew),
-              icon: Icon(_isAddingNew ? LucideIcons.user : LucideIcons.plus, size: 16),
-              label: Text(_isAddingNew ? 'Use Primary' : 'Add New', style: const TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (!_isAddingNew && _currentUser?.phoneNumber != null)
+        const Text('Select Bank Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 12),
+        if (_userAccounts.isEmpty)
           GestureDetector(
-            onTap: () => setState(() => _isAddingNew = false),
+            onTap: () {
+              // Logic to link new bank via Stripe Financial Connections or manual form
+            },
             child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(LucideIcons.phone, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Primary Number', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
-                      Text(_currentUser!.phoneNumber!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                  const Spacer(),
-                  const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
-                ],
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(LucideIcons.landmark, color: secondaryTextColor, size: 32),
+                    const SizedBox(height: 12),
+                    const Text('No Bank Accounts Linked', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Link an account for instant ACH deposits', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                    const SizedBox(height: 16),
+                    TextButton(onPressed: () {}, child: const Text('Link New Bank')),
+                  ],
+                ),
               ),
             ),
           )
         else
-          Column(
-            children: [
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  prefixText: '+254 ',
-                  hintText: '7XXXXXXXX',
-                  filled: true,
-                  fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          ..._userAccounts.map((acc) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedAccount = acc),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                border: _selectedAccount?.id == acc.id ? Border.all(color: AppColors.primary, width: 2) : null,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                      child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text('****${acc.accountNumber.substring(acc.accountNumber.length - 4)}', 
+                          style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (_selectedAccount?.id == acc.id)
+                      const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _rememberNumber,
-                    onChanged: (v) => setState(() => _rememberNumber = v ?? false),
-                    activeColor: AppColors.primary,
-                  ),
-                  const Text('Remember this number', style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
-                ],
-              ),
-            ],
-          ),
+            ),
+          )).toList(),
+        
+        const SizedBox(height: 32),
+        const Text('Manual Bank Transfer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 12),
+        _buildManualBankInfo(secondaryTextColor),
       ],
     );
   }
 
-  Widget _buildBankInfo(Color secondaryTextColor) {
-    if (_isLoadingAccounts) return const Center(child: CircularProgressIndicator());
-    if (_systemAccounts.isEmpty) return const Center(child: Text('No bank accounts available'));
-
+  Widget _buildManualBankInfo(Color secondaryTextColor) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Manual Bank Funding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 8),
-        Text('Transfer funds to any of the accounts below and upload the receipt in the help section.', 
-          style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-        const SizedBox(height: 24),
-        ..._systemAccounts.map((acc) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: GlassCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('1. Send funds to our account:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 12),
+              ..._systemAccounts.take(1).map((acc) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(acc['bank_name'] ?? 'Bank', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(LucideIcons.copy, size: 16),
+                        onPressed: () => Clipboard.setData(ClipboardData(text: acc['account_number'] ?? '')),
+                      ),
+                    ],
+                  ),
+                  Text('A/C: ${acc['account_number']}', style: TextStyle(color: secondaryTextColor, fontSize: 14)),
+                ],
+              )),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text('2. Use this reference code:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(acc['bank_name'] ?? 'Bank', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    IconButton(
-                      icon: const Icon(LucideIcons.copy, size: 16),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: acc['account_number'] ?? ''));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account number copied')));
-                      },
-                    ),
+                    Text(_referenceCode ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 1.2)),
+                    const Icon(LucideIcons.info, size: 16, color: AppColors.primary),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text('A/C: ${acc['account_number']}', style: TextStyle(fontSize: 14, color: secondaryTextColor)),
-                Text('Name: ${acc['account_holder_name']}', style: TextStyle(fontSize: 14, color: secondaryTextColor)),
-              ],
-            ),
+              ),
+            ],
           ),
-        )).toList(),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: () {
+            // Logic to pick image and upload receipt
+          },
+          icon: const Icon(LucideIcons.upload, size: 18),
+          label: const Text('I have sent the funds (Upload Receipt)'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
       ],
     );
   }

@@ -63,6 +63,81 @@ class TransactionService {
     return VaultUser.fromJson(response);
   }
 
+  Future<List<BankAccount>> getUserBankAccounts() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await _supabase
+        .from('user_bank_accounts')
+        .select()
+        .eq('user_id', userId);
+    
+    return (response as List).map((json) => BankAccount.fromJson(json)).toList();
+  }
+
+  Future<Map<String, dynamic>> createStripeAchIntent({
+    required double amount,
+    required String currency,
+  }) async {
+    final response = await _supabase.functions.invoke('stripe-create-intent', body: {
+      'amount': amount,
+      'currency': currency,
+      'payment_method_types': ['us_bank_account'],
+    });
+    
+    final intentData = response.data as Map<String, dynamic>;
+    final intentId = intentData['id'] as String?;
+    
+    if (intentId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: amount,
+        description: intentId,
+        method: 'bank',
+      );
+    }
+    
+    return intentData;
+  }
+
+  String generateReferenceCode() {
+    final userId = _supabase.auth.currentUser?.id ?? 'USER';
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    return 'VLT-${userId.substring(0, 4).toUpperCase()}-$timestamp';
+  }
+
+  Future<String> uploadTransferReceipt(String filePath) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final fileName = 'receipts/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await _supabase.storage.from('receipts').upload(fileName, filePath);
+    return _supabase.storage.from('receipts').getPublicUrl(fileName);
+  }
+
+  Future<void> reportManualTransfer({
+    required double amount,
+    required String reference,
+    required String receiptUrl,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('transactions').insert({
+      'sender_id': userId,
+      'receiver_id': userId,
+      'amount': amount,
+      'type': 'deposit',
+      'status': 'pending',
+      'description': 'Manual Bank Transfer: $reference',
+      'method': 'bank',
+      'metadata': {
+        'receipt_url': receiptUrl,
+        'reference_code': reference,
+      },
+    });
+  }
+
   Future<void> updateProfilePhoneNumber(String phoneNumber) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;
