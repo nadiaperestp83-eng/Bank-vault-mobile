@@ -229,7 +229,25 @@ class DashboardService {
         // Sort by date descending (newest first)
         combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        return combined;
+        // Deduplicate login notifications: Keep Biometric over generic Login
+        final deduped = <VaultNotification>[];
+        for (int i = 0; i < combined.length; i++) {
+          final current = combined[i];
+          final currentTitle = current.title.toLowerCase();
+          
+          if (currentTitle == 'login' || currentTitle == 'account login') {
+            final hasBiometric = combined.any((other) {
+              final otherTitle = other.title.toLowerCase();
+              return otherTitle == 'biometric login' && 
+                     (other.createdAt.difference(current.createdAt).inSeconds.abs() < 10);
+            });
+            if (!hasBiometric) deduped.add(current);
+          } else {
+            deduped.add(current);
+          }
+        }
+
+        return deduped;
       },
     );
   }
