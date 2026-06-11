@@ -566,6 +566,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     IconData icon;
     Color color;
     String? logoPath;
+    String? profilePhotoUrl;
+    String? initials;
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isTransfer = tx.type == 'transfer';
+
+    if (isTransfer) {
+      final otherProfile = tx.senderId == currentUserId ? tx.receiverProfile : tx.senderProfile;
+      if (otherProfile != null) {
+        profilePhotoUrl = otherProfile.profilePhotoUrl;
+        initials = ((otherProfile.firstName?.isNotEmpty ?? false) ? otherProfile.firstName![0] : '') + 
+                   ((otherProfile.lastName?.isNotEmpty ?? false) ? otherProfile.lastName![0] : '');
+      }
+    }
 
     final method = tx.method?.toLowerCase() ?? '';
     final description = tx.description?.toLowerCase() ?? '';
@@ -588,6 +602,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final theme = Theme.of(context);
       icon = isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight;
       color = isPositive ? AppColors.success : theme.colorScheme.primary;
+    }
+
+    if (isTransfer && (profilePhotoUrl != null || initials != null)) {
+      final theme = Theme.of(context);
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: color.withOpacity(0.1),
+        backgroundImage: profilePhotoUrl != null ? NetworkImage(profilePhotoUrl) : null,
+        child: profilePhotoUrl == null ? Text(
+          initials ?? '',
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+        ) : null,
+      );
     }
 
     return Container(
