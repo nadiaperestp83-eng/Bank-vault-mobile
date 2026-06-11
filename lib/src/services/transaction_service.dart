@@ -139,6 +139,37 @@ class TransactionService {
     });
   }
 
+  Future<void> linkBankAccount({
+    required String bankName,
+    required String accountNumber,
+    String? accountHolderName,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('user_bank_accounts').insert({
+      'user_id': userId,
+      'bank_name': bankName,
+      'account_number': accountNumber,
+      'account_holder_name': accountHolderName,
+    });
+  }
+
+  List<Map<String, String>> getSupportedBanks() {
+    return [
+      {'name': 'Equity Bank', 'logo': 'equity.svg'},
+      {'name': 'KCB Bank', 'logo': 'kcb.svg'},
+      {'name': 'Co-operative Bank', 'logo': 'coop.svg'},
+      {'name': 'NCBA Bank', 'logo': 'ncba.svg'},
+      {'name': 'Absa Bank', 'logo': 'absa.svg'},
+      {'name': 'Stanbic Bank', 'logo': 'stanbic.svg'},
+      {'name': 'Standard Chartered', 'logo': 'standard-chartered.svg'},
+      {'name': 'DTB Bank', 'logo': 'dtb.svg'},
+      {'name': 'Family Bank', 'logo': 'family-bank.svg'},
+      {'name': 'I&M Bank', 'logo': 'im-bank.svg'},
+    ];
+  }
+
   Future<void> updateProfilePhoneNumber(String phoneNumber) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;

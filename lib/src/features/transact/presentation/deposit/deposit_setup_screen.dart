@@ -25,6 +25,7 @@ class DepositSetupScreen extends StatefulWidget {
 class _DepositSetupScreenState extends State<DepositSetupScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _accountNumberController = TextEditingController();
   final TransactionService _txService = TransactionService();
   List<BankAccount> _userAccounts = [];
   List<Map<String, dynamic>> _systemAccounts = [];
@@ -34,6 +35,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   VaultUser? _currentUser;
   bool _isAddingNew = false;
   bool _rememberNumber = false;
+  Map<String, String>? _selectedBankToLink;
 
   @override
   void initState() {
@@ -62,7 +64,73 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   void dispose() {
     _amountController.dispose();
     _phoneController.dispose();
+    _accountNumberController.dispose();
     super.dispose();
+  }
+
+  void _showBankSelectionSheet() {
+    final banks = _txService.getSupportedBanks();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            const Text('Select Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: banks.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final bank = banks[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
+                    ),
+                    title: Text(bank['name']!),
+                    onTap: () {
+                      setState(() => _selectedBankToLink = bank);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onLinkBank() async {
+    if (_selectedBankToLink == null || _accountNumberController.text.isEmpty) return;
+    
+    setState(() => _isLoadingAccounts = true);
+    try {
+      await _txService.linkBankAccount(
+        bankName: _selectedBankToLink!['name']!,
+        accountNumber: _accountNumberController.text,
+      );
+      _userAccounts = await _txService.getUserBankAccounts();
+      setState(() => _selectedBankToLink = null);
+      _accountNumberController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bank account linked successfully')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isLoadingAccounts = false);
+    }
   }
 
   void _onDeposit() {
@@ -280,62 +348,107 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Select Bank Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 12),
-        if (_userAccounts.isEmpty)
-          GestureDetector(
-            onTap: () {
-              // Logic to link new bank via Stripe Financial Connections or manual form
-            },
-            child: GlassCard(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(LucideIcons.landmark, color: secondaryTextColor, size: 32),
-                    const SizedBox(height: 12),
-                    const Text('No Bank Accounts Linked', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text('Link an account for instant ACH deposits', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                    const SizedBox(height: 16),
-                    TextButton(onPressed: () {}, child: const Text('Link New Bank')),
-                  ],
+        if (_selectedBankToLink != null) ...[
+          Text('Linking ${_selectedBankToLink!['name']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _accountNumberController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'Account Number',
+              filled: true,
+              fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => setState(() => _selectedBankToLink = null),
+                  child: const Text('Cancel'),
                 ),
               ),
-            ),
-          )
-        else
-          ..._userAccounts.map((acc) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedAccount = acc),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _onLinkBank,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Link Account'),
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          const Text('Select Bank Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 12),
+          if (_userAccounts.isEmpty)
+            GestureDetector(
+              onTap: _showBankSelectionSheet,
               child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                border: _selectedAccount?.id == acc.id ? Border.all(color: AppColors.primary, width: 2) : null,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                      child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        Text('****${acc.accountNumber.substring(acc.accountNumber.length - 4)}', 
-                          style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                      ],
-                    ),
-                    const Spacer(),
-                    if (_selectedAccount?.id == acc.id)
-                      const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
-                  ],
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(LucideIcons.landmark, color: secondaryTextColor, size: 32),
+                      const SizedBox(height: 12),
+                      const Text('No Bank Accounts Linked', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('Link an account for instant ACH deposits', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                      const SizedBox(height: 16),
+                      TextButton(onPressed: _showBankSelectionSheet, child: const Text('Link New Bank')),
+                    ],
+                  ),
                 ),
               ),
+            )
+          else
+            Column(
+              children: [
+                ..._userAccounts.map((acc) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedAccount = acc),
+                    child: GlassCard(
+                      padding: const EdgeInsets.all(16),
+                      border: _selectedAccount?.id == acc.id ? Border.all(color: AppColors.primary, width: 2) : null,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text('****${acc.accountNumber.substring(acc.accountNumber.length - 4)}', 
+                                style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                            ],
+                          ),
+                          const Spacer(),
+                          if (_selectedAccount?.id == acc.id)
+                            const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                )).toList(),
+                TextButton.icon(
+                  onPressed: _showBankSelectionSheet,
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Link Another Bank'),
+                ),
+              ],
             ),
-          )).toList(),
+        ],
         
         const SizedBox(height: 32),
         const Text('Manual Bank Transfer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
