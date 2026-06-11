@@ -90,6 +90,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       builder: (context) => PinEntrySheet(
         onConfirm: (pin) async {
           if (widget.method == 'mpesa') {
+            final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
             if (_isAddingNew && _rememberNumber) {
               await _txService.updateProfilePhoneNumber(phoneNumber);
             }
