@@ -1,4 +1,6 @@
-class VaultUser {
+import 'package:equatable/equatable.dart';
+
+class VaultUser extends Equatable {
   final String id;
   final String? firstName;
   final String? lastName;
@@ -44,15 +46,48 @@ class VaultUser {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'first_name': firstName,
+      'last_name': lastName,
+      'email': email,
+      'phone_number': phoneNumber,
+      'profile_photo_url': profilePhotoUrl,
+      'kyc_status': kycStatus,
+      'kyc_tag': kycTag,
+      'primary_currency': primaryCurrency,
+      'pin_hash': pinHash,
+      'country': country,
+      'biometric_enabled': biometricEnabled,
+    };
+  }
+
   String get fullName {
     if (firstName == null && lastName == null) return 'Vault User';
     return '${firstName ?? ''} ${lastName ?? ''}'.trim();
   }
   
   bool get hasPin => pinHash != null;
+
+  @override
+  List<Object?> get props => [
+        id,
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+        profilePhotoUrl,
+        kycStatus,
+        kycTag,
+        primaryCurrency,
+        pinHash,
+        country,
+        biometricEnabled,
+      ];
 }
 
-class Wallet {
+class Wallet extends Equatable {
   final String id;
   final String userId;
   final double balance;
@@ -79,15 +114,28 @@ class Wallet {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'balance': balance,
+      'currency': currency,
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
   double getBalanceIn(String targetCurrency, double conversionRate) {
     if (currency == targetCurrency) return balance;
     if (currency == 'USD' && targetCurrency == 'KES') return balance * conversionRate;
     if (currency == 'KES' && targetCurrency == 'USD') return balance / conversionRate;
     return balance;
   }
+
+  @override
+  List<Object?> get props => [id, userId, balance, currency, updatedAt];
 }
 
-class VaultTransaction {
+class VaultTransaction extends Equatable {
   final String id;
   final String? senderId;
   final String? receiverId;
@@ -143,9 +191,44 @@ class VaultTransaction {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'amount': amount,
+      'currency': currency,
+      'type': type,
+      'method': method,
+      'status': status,
+      'created_at': createdAt.toIso8601String(),
+      'description': description,
+      'recorded_balance': recordedBalance,
+      'sender_profile': senderProfile?.toJson(),
+      'receiver_profile': receiverProfile?.toJson(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        senderId,
+        receiverId,
+        amount,
+        currency,
+        type,
+        method,
+        status,
+        createdAt,
+        description,
+        recordedBalance,
+        senderProfile,
+        receiverProfile,
+      ];
 }
 
-class VaultNotification {
+class VaultNotification extends Equatable {
   final String id;
   final String userId;
   final String title;
@@ -177,9 +260,24 @@ class VaultNotification {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'title': title,
+      'message': message,
+      'type': type,
+      'is_read': isRead,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [id, userId, title, message, type, isRead, createdAt];
 }
 
-class BalanceHistory {
+class BalanceHistory extends Equatable {
   final String id;
   final String walletId;
   final double balance;
@@ -202,9 +300,21 @@ class BalanceHistory {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'wallet_id': walletId,
+      'recorded_balance': balance,
+      'recorded_at': recordedAt.toIso8601String(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [id, walletId, balance, recordedAt];
 }
 
-class SavingsGoal {
+class SavingsGoal extends Equatable {
   final String id;
   final String userId;
   final String title;
@@ -248,6 +358,7 @@ class SavingsGoal {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'user_id': userId,
       'title': title,
       'target_amount': targetAmount,
@@ -262,9 +373,23 @@ class SavingsGoal {
 
   double get progress => targetAmount > 0 ? currentAmount / targetAmount : 0.0;
   int get daysRemaining => deadlineDate != null ? deadlineDate!.difference(DateTime.now()).inDays : 0;
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        title,
+        targetAmount,
+        currentAmount,
+        deadlineDate,
+        status,
+        automationFrequency,
+        automationAmount,
+        rewardCredited,
+      ];
 }
 
-class SavingsLedgerEntry {
+class SavingsLedgerEntry extends Equatable {
   final String id;
   final String goalId;
   final String userId;
@@ -299,4 +424,20 @@ class SavingsLedgerEntry {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'goal_id': goalId,
+      'user_id': userId,
+      'amount': amount,
+      'source': source,
+      'type': type,
+      'running_total': runningTotal,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [id, goalId, userId, amount, source, type, runningTotal, createdAt];
 }

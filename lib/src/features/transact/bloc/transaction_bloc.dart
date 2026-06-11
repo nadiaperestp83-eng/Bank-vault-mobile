@@ -41,6 +41,10 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
 
   Future<void> _onLoadFrequentRecipients(
       LoadFrequentRecipients event, Emitter<TransactionState> emit) async {
+    if (_frequentRecipients.isNotEmpty) {
+      emit(RecipientsLoaded(frequent: _frequentRecipients));
+      return;
+    }
     try {
       _frequentRecipients = await transactionService.getFrequentRecipients();
       emit(RecipientsLoaded(frequent: _frequentRecipients));

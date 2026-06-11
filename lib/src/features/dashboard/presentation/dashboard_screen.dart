@@ -102,36 +102,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _buildGreeting(context, state.user),
                         const SizedBox(height: 24),
 
+                        _buildPortfolioSummaryCard(context, state)
+                            .animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+                        
+                        _buildRecentTransactions(context, state.transactions)
+                            .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+
                         ...state.notifications
                             .where((n) => n.type == 'warning')
                             .map((n) => _buildWarningBanner(context, n)),
 
                         _buildAIInsightWidget(context, state.latestInsight)
-                            .animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-                        
-                        const SizedBox(height: 24),
-                        
-                        _buildPortfolioSummaryCard(context, state)
-                            .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-                        
-                        const SizedBox(height: 24),
-                        
-                        _buildCoreAccountCard(context, state.wallet, state.user.primaryCurrency)
                             .animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        _buildGrowthChart(context, state.growthData)
+                        _buildCoreAccountCard(context, state.wallet, state.user.primaryCurrency)
                             .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
+                        _buildGrowthChart(context, state.growthData)
                             .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        _buildRecentTransactions(context, state.transactions)
+                        _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
                             .animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 120),

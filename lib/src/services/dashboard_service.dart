@@ -229,25 +229,28 @@ class DashboardService {
         // Sort by date descending (newest first)
         combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        // Deduplicate login notifications: Keep Biometric over generic Login
-        final deduped = <VaultNotification>[];
-        for (int i = 0; i < combined.length; i++) {
-          final current = combined[i];
-          final currentTitle = current.title.toLowerCase();
-          
-          if (currentTitle == 'login' || currentTitle == 'account login') {
-            final hasBiometric = combined.any((other) {
-              final otherTitle = other.title.toLowerCase();
-              return otherTitle == 'biometric login' && 
-                     (other.createdAt.difference(current.createdAt).inSeconds.abs() < 10);
+        // Filter and Deduplicate
+        final filtered = <VaultNotification>[];
+        for (final n in combined) {
+          final title = n.title.toLowerCase();
+
+          // Rule 1: Remove "Biometric login" and generic "Login" completely as requested
+          if (title.contains('biometric login') || title == 'login') continue;
+
+          // Rule 2: Deduplicate remaining login alerts (e.g., "Account Login") if multiple occur within 10 seconds
+          if (title.contains('account login')) {
+            final isDuplicate = filtered.any((existing) {
+              final existingTitle = existing.title.toLowerCase();
+              return existingTitle.contains('account login') &&
+                     (existing.createdAt.difference(n.createdAt).inSeconds.abs() < 10);
             });
-            if (!hasBiometric) deduped.add(current);
-          } else {
-            deduped.add(current);
+            if (isDuplicate) continue;
           }
+
+          filtered.add(n);
         }
 
-        return deduped;
+        return filtered;
       },
     );
   }
