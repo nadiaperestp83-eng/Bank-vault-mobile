@@ -14,6 +14,7 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_stat
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../models/vault_models.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -584,12 +585,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final method = tx.method?.toLowerCase() ?? '';
     final description = tx.description?.toLowerCase() ?? '';
 
+    // Map method/description to logo assets
     if (method.contains('mpesa') || description.contains('mpesa')) {
-      logoPath = 'assets/logos/mpesa.png';
+      logoPath = 'assets/logos/mpesa.svg';
     } else if (method.contains('kcb') || description.contains('kcb')) {
-      logoPath = 'assets/logos/kcb.png';
+      logoPath = 'assets/logos/kcb.svg';
+    } else if (method.contains('absa') || description.contains('absa')) {
+      logoPath = 'assets/logos/absa.svg';
+    } else if (method.contains('equity') || description.contains('equity')) {
+      logoPath = 'assets/logos/equity.svg';
+    } else if (method.contains('co-op') || method.contains('coop') || description.contains('coop')) {
+      logoPath = 'assets/logos/coop.svg';
+    } else if (method.contains('chase') || description.contains('chase')) {
+      logoPath = 'assets/logos/chase.svg';
+    } else if (method.contains('stanbic') || description.contains('stanbic')) {
+      logoPath = 'assets/logos/stanbic.svg';
+    } else if (method.contains('standard chartered') || description.contains('standard chartered')) {
+      logoPath = 'assets/logos/standard-chartered.svg';
+    } else if (method.contains('ncba') || description.contains('ncba')) {
+      logoPath = 'assets/logos/ncba.svg';
+    } else if (method.contains('dtb') || description.contains('dtb')) {
+      logoPath = 'assets/logos/dtb.svg';
+    } else if (method.contains('family bank') || description.contains('family bank')) {
+      logoPath = 'assets/logos/family-bank.svg';
+    } else if (method.contains('im bank') || description.contains('im bank')) {
+      logoPath = 'assets/logos/im-bank.svg';
+    } else if (method.contains('airtel') || description.contains('airtel')) {
+      logoPath = 'assets/logos/airtel.svg';
+    } else if (method.contains('tkash') || description.contains('tkash')) {
+      logoPath = 'assets/logos/tkash.svg';
+    } else if (method.contains('bank of america') || description.contains('bank of america')) {
+      logoPath = 'assets/logos/bank-of-america.svg';
     } else if (method.contains('stripe') || description.contains('stripe')) {
-      logoPath = 'assets/logos/stripe.png';
+      logoPath = 'assets/logos/stripe.svg';
+    } else if (method.contains('bank') || description.contains('bank')) {
+      logoPath = 'assets/logos/bank.svg';
     }
 
     if (tx.type == 'deposit') {
@@ -624,11 +654,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         shape: BoxShape.circle,
       ),
       child: logoPath != null 
-        ? Image.asset(
+        ? SvgPicture.asset(
             logoPath, 
             width: 18, 
             height: 18, 
-            errorBuilder: (c, e, s) => Icon(icon, color: color, size: 18),
+            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 18),
           )
         : Icon(icon, color: color, size: 18),
     );
