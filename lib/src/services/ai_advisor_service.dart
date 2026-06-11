@@ -34,33 +34,40 @@ class AiAdvisorService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    // 1. Insert user message
+    // 1. Fetch current history for grounding
+    final history = await getChatHistory();
+
+    // Convert history to a lightweight format for the Edge Function
+    final messages = history.map((m) => {
+      'role': m.sender == 'user' ? 'user' : 'model',
+      'content': m.text,
+    }).toList();
+
+    // 2. Insert user message locally
     await _supabase.from('ai_chat_messages').insert({
       'user_id': userId,
       'sender': 'user',
       'text': text,
     });
 
-    // 2. Invoke Edge Function
+    // 3. Invoke Edge Function with Grounding Context
     try {
       final response = await _supabase.functions.invoke(
         'gemini-chat',
-        body: {'message': text},
+        body: {
+          'userInput': text,
+          'messages': messages,
+        },
       );
 
-      final String aiReply = response.data['reply'] ?? "I'm sorry, I couldn't process that.";
+      final String aiReply = response.data['text'] ?? response.data['reply'] ?? "I'm sorry, I couldn't process that.";
 
-      // 3. Insert AI response (The Edge function might already do this, 
-      // but if not, we do it here for permanence as per requirements)
-      // Check if already inserted by function to avoid duplicates
-      final history = await getChatHistory();
-      if (history.isEmpty || history.last.text != aiReply) {
-        await _supabase.from('ai_chat_messages').insert({
-          'user_id': userId,
-          'sender': 'advisor',
-          'text': aiReply,
-        });
-      }
+      // 4. Insert AI response
+      await _supabase.from('ai_chat_messages').insert({
+        'user_id': userId,
+        'sender': 'advisor',
+        'text': aiReply,
+      });
     } catch (e) {
        await _supabase.from('ai_chat_messages').insert({
         'user_id': userId,
@@ -69,7 +76,6 @@ class AiAdvisorService {
       });
     }
   }
-
   Future<void> clearHistory() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;

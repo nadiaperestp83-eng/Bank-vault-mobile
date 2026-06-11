@@ -466,31 +466,31 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               ),
               Expanded(
-                child: StreamBuilder<List<VaultReceipt>>(
-                  stream: ref.watch(dashboardServiceProvider).getReceiptsStream(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    final receipts = snapshot.data ?? [];
-                    if (receipts.isEmpty) {
-                      return const Center(child: Text('No receipts found'));
-                    }
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final receiptsAsync = ref.watch(receiptsStreamProvider);
+                    
+                    return receiptsAsync.when(
+                      data: (receipts) {
+                        if (receipts.isEmpty) {
+                          return const Center(child: Text('No receipts found'));
+                        }
 
-                    // Sort by date descending
-                    final sorted = [...receipts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                        // Sort by date descending
+                        final sorted = [...receipts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
-                      itemCount: sorted.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final receipt = sorted[index];
-                        return _buildReceiptItem(context, receipt);
+                        return ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final receipt = sorted[index];
+                            return _buildReceiptItem(context, receipt);
+                          },
+                        );
                       },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
                     );
                   },
                 ),
@@ -504,30 +504,40 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
 
   Widget _buildReceiptItem(BuildContext context, VaultReceipt receipt) {
     final theme = Theme.of(context);
-    final date = DateFormat('MMM dd, yyyy').format(receipt.createdAt);
+    final date = DateFormat('MMM d').format(receipt.createdAt);
+    final description = receipt.transactionDetails['description']?.toString() ?? 
+                       (receipt.transactionDetails['type']?.toString().toUpperCase() ?? "TRANSACTION");
     
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(LucideIcons.fileText, size: 20, color: AppColors.primary),
+      ),
       title: Text(
-        receipt.receiptNumber,
+        description,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
       ),
       subtitle: Text(
-        '$date • ${receipt.transactionDetails['type']?.toString().toUpperCase() ?? "TRANSACTION"}',
+        receipt.receiptNumber,
         style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
             '${receipt.currency} ${NumberFormat('#,###.00').format(receipt.amount)}',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(LucideIcons.download, size: 18),
-            onPressed: () => _downloadReceipt(context, receipt),
-            visualDensity: VisualDensity.compact,
+          Text(
+            date,
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           ),
         ],
       ),
