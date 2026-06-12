@@ -418,9 +418,10 @@ class TransactionService {
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
         .order('created_at', ascending: false)
-        .map((data) {
+        .asyncMap((data) async {
           if (data.isEmpty) return _getMockTransactions();
-          return data.map((json) => VaultTransaction.fromJson(json)).toList();
+          final transactions = data.map((json) => VaultTransaction.fromJson(json)).toList();
+          return await _attachProfilesToTransactions(transactions, userId);
         });
   }
 
@@ -446,11 +447,48 @@ class TransactionService {
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isEmpty) return _getMockTransactions();
       
-      _cache.saveTransactionHistory(transactions);
-      return transactions;
+      final withProfiles = await _attachProfilesToTransactions(transactions, userId);
+      _cache.saveTransactionHistory(withProfiles);
+      return withProfiles;
     } catch (e) {
       return _getMockTransactions();
     }
+  }
+
+  Future<List<VaultTransaction>> _attachProfilesToTransactions(List<VaultTransaction> transactions, String userId) async {
+    final Set<String> otherIds = {};
+    for (var tx in transactions) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null) otherIds.add(otherId);
+      }
+    }
+
+    if (otherIds.isEmpty) return transactions;
+
+    final profilesResponse = await _supabase
+        .from('profiles')
+        .select()
+        .inFilter('id', otherIds.toList());
+
+    if (profilesResponse == null) return transactions;
+
+    final Map<String, VaultUser> profileMap = {
+      for (var p in (profilesResponse as List)) p['id']: VaultUser.fromJson(p)
+    };
+
+    return transactions.map((tx) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null && profileMap.containsKey(otherId)) {
+          final profile = profileMap[otherId];
+          return tx.senderId == userId 
+              ? tx.copyWith(receiverProfile: profile)
+              : tx.copyWith(senderProfile: profile);
+        }
+      }
+      return tx;
+    }).toList();
   }
 
   void _refreshTransactionHistoryInBackground(String userId) async {
@@ -463,7 +501,8 @@ class TransactionService {
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isNotEmpty) {
-        _cache.saveTransactionHistory(transactions);
+        final withProfiles = await _attachProfilesToTransactions(transactions, userId);
+        _cache.saveTransactionHistory(withProfiles);
       }
     } catch (e) {
       // Silent error for background refresh

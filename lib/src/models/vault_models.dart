@@ -268,22 +268,44 @@ class VaultTransaction extends Equatable {
   });
 
   factory VaultTransaction.fromJson(Map<String, dynamic> json) {
+    final metadata = json['metadata'] as Map<String, dynamic>? ?? {};
+    final type = json['type'] as String? ?? 'transfer';
+    final userId = json['user_id'] as String?;
+    final rawAmount = (json['amount'] as num?)?.toDouble() ?? 0.0;
+    
+    // For ledger entries, we infer sender/receiver
+    String? senderId;
+    String? receiverId;
+    
+    if (type == 'transfer') {
+      if (rawAmount < 0) {
+        // I am the sender
+        senderId = userId;
+        receiverId = metadata['recipient_id'] as String?;
+      } else {
+        // I am the receiver
+        senderId = metadata['sender_id'] as String?;
+        receiverId = userId;
+      }
+    } else {
+      senderId = userId;
+      receiverId = userId;
+    }
+
     return VaultTransaction(
       id: json['id'] ?? '',
-      senderId: json['sender_id'] as String? ?? json['user_id'] as String?,
-      receiverId: json['receiver_id'] as String?,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      senderId: senderId,
+      receiverId: receiverId,
+      amount: rawAmount.abs(),
       currency: json['currency'] ?? 'USD',
-      type: json['type'] ?? 'transfer',
-      method: json['method'] as String? ?? (json['metadata']?['method'] as String?),
+      type: type,
+      method: json['method'] as String? ?? metadata['method'] as String?,
       status: json['status'] ?? 'pending',
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
       description: json['description'] as String?,
-      recordedBalance: json['recorded_balance'] != null 
-          ? (json['recorded_balance'] as num?)?.toDouble() 
-          : null,
+      recordedBalance: (metadata['recorded_balance'] as num?)?.toDouble(),
       senderProfile: json['sender_profile'] != null 
           ? VaultUser.fromJson(json['sender_profile']) 
           : null,
@@ -293,11 +315,61 @@ class VaultTransaction extends Equatable {
     );
   }
 
+  VaultTransaction copyWith({
+    String? id,
+    String? senderId,
+    String? receiverId,
+    double? amount,
+    String? currency,
+    String? type,
+    String? method,
+    String? status,
+    DateTime? createdAt,
+    String? description,
+    double? recordedBalance,
+    VaultUser? senderProfile,
+    VaultUser? receiverProfile,
+  }) {
+    return VaultTransaction(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      amount: amount ?? this.amount,
+      currency: currency ?? this.currency,
+      type: type ?? this.type,
+      method: method ?? this.method,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      description: description ?? this.description,
+      recordedBalance: recordedBalance ?? this.recordedBalance,
+      senderProfile: senderProfile ?? this.senderProfile,
+      receiverProfile: receiverProfile ?? this.receiverProfile,
+    );
+  }
+
   factory VaultTransaction.fromLedger(LedgerEntry ledger) {
+    final rawAmount = ledger.amount;
+    String? senderId;
+    String? receiverId;
+
+    if (ledger.type == 'transfer') {
+      if (rawAmount < 0) {
+        senderId = ledger.userId;
+        receiverId = ledger.metadata['recipient_id'] as String?;
+      } else {
+        senderId = ledger.metadata['sender_id'] as String?;
+        receiverId = ledger.userId;
+      }
+    } else {
+      senderId = ledger.userId;
+      receiverId = ledger.userId;
+    }
+
     return VaultTransaction(
       id: ledger.reference ?? ledger.id,
-      senderId: ledger.userId,
-      amount: ledger.amount,
+      senderId: senderId,
+      receiverId: receiverId,
+      amount: rawAmount.abs(),
       currency: ledger.currency,
       type: ledger.type,
       method: ledger.metadata['method'] as String?,

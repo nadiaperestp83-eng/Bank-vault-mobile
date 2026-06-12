@@ -157,7 +157,48 @@ class DashboardService {
         .order('created_at', ascending: false);
 
     if (response == null) return [];
-    return (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
+    
+    final List<Map<String, dynamic>> rawEntries = List<Map<String, dynamic>>.from(response);
+    
+    // 1. Map to VaultTransaction initially to extract IDs
+    final List<VaultTransaction> transactions = rawEntries.map((json) => VaultTransaction.fromJson(json)).toList();
+    
+    // 2. Identify unique "other party" IDs
+    final Set<String> otherIds = {};
+    for (var tx in transactions) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null) otherIds.add(otherId);
+      }
+    }
+    
+    // 3. Fetch all required profiles in one go
+    if (otherIds.isEmpty) return transactions;
+    
+    final profilesResponse = await _supabase
+        .from('profiles')
+        .select()
+        .inFilter('id', otherIds.toList());
+        
+    if (profilesResponse == null) return transactions;
+    
+    final Map<String, VaultUser> profileMap = {
+      for (var p in (profilesResponse as List)) p['id']: VaultUser.fromJson(p)
+    };
+    
+    // 4. Attach profiles back to transactions
+    return transactions.map((tx) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null && profileMap.containsKey(otherId)) {
+          final profile = profileMap[otherId];
+          return tx.senderId == userId 
+              ? tx.copyWith(receiverProfile: profile)
+              : tx.copyWith(senderProfile: profile);
+        }
+      }
+      return tx;
+    }).toList();
   }
 
   // Module 4: AI Insights & Proactive Alerts
