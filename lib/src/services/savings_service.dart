@@ -114,15 +114,18 @@ class SavingsService {
           .update({'balance': wallet.balance - deductionAmount})
           .eq('id', wallet.id);
 
-      // Create record in main transactions table
-      await _supabase.from('transactions').insert({
+      // Create record in main ledger table
+      await _supabase.from('ledger_entries').insert({
         'user_id': userId,
-        'sender_id': userId,
         'amount': amount,
         'currency': 'KES',
         'type': 'transfer',
         'status': 'completed',
         'description': 'Contribution to ${goal.title}',
+        'metadata': {
+          'category': 'savings',
+          'goal_id': goal.id,
+        },
       });
     }
 

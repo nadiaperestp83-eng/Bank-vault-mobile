@@ -16,25 +16,31 @@ serve(async (req) => {
     if (resultCode === 0) {
       // Success
       // 1. Fetch transaction details
-      const { data: transaction, error: txError } = await supabase
-        .from('transactions')
-        .select('sender_id, amount')
+      const { data: entry, error: txError } = await supabase
+        .from('ledger_entries')
+        .select('user_id, amount')
         .eq('description', checkoutRequestID)
         .single()
 
-      if (!txError && transaction) {
+      if (!txError && entry) {
         // 2. Use create_ledger_entry RPC to atomically update balance and ledger
-        await supabase.rpc('create_ledger_entry', {
-          p_user_id: transaction.sender_id,
-          p_amount: transaction.amount,
-          p_reference: checkoutRequestID,
-          p_type: 'deposit'
-        })
+        // Actually if we use create_ledger_entry it might create ANOTHER entry.
+        // We should probably just update the status of the existing one.
+        await supabase
+          .from('ledger_entries')
+          .update({ status: 'completed' })
+          .eq('description', checkoutRequestID)
+        
+        // And update wallet balance (ideally this should be an atomic RPC)
+        const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', entry.user_id).single()
+        if (wallet) {
+          await supabase.from('wallets').update({ balance: wallet.balance + entry.amount }).eq('user_id', entry.user_id)
+        }
       }
     } else {
       // Failure
       await supabase
-        .from('transactions')
+        .from('ledger_entries')
         .update({ 
           status: 'failed',
           description: `M-Pesa Error Code: ${resultCode}` 

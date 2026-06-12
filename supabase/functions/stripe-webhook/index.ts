@@ -47,7 +47,7 @@ serve(async (req) => {
   } else if (event.type === 'payment_intent.payment_failed') {
     const paymentIntent = event.data.object
     await supabase
-      .from('transactions')
+      .from('ledger_entries')
       .update({ 
         status: 'failed',
         description: paymentIntent.last_payment_error?.message 

@@ -151,13 +151,9 @@ class DashboardService {
     if (userId == null) throw Exception('User not authenticated');
 
     final response = await _supabase
-        .from('transactions')
-        .select('''
-          *,
-          sender_profile:profiles!transactions_sender_id_fkey(*),
-          receiver_profile:profiles!transactions_receiver_id_fkey(*)
-        ''')
-        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .from('ledger_entries')
+        .select()
+        .eq('user_id', userId)
         .order('created_at', ascending: false);
 
     if (response == null) return [];
@@ -308,17 +304,18 @@ class DashboardService {
     if (userId == null) throw Exception('User not authenticated');
 
     final response = await _supabase
-        .from('transactions')
-        .select('receiver_id')
-        .eq('sender_id', userId)
+        .from('ledger_entries')
+        .select('metadata')
+        .eq('user_id', userId)
+        .eq('type', 'transfer')
         .order('created_at', ascending: false)
         .limit(20);
 
     if (response == null) return [];
 
     final receiverIds = (response as List)
-        .where((t) => t['receiver_id'] != null)
-        .map((t) => t['receiver_id'] as String)
+        .where((t) => t['metadata']?['recipient_id'] != null)
+        .map((t) => t['metadata']?['recipient_id'] as String)
         .toSet()
         .take(4)
         .toList();

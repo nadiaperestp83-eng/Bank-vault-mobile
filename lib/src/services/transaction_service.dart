@@ -127,17 +127,16 @@ class TransactionService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _supabase.from('transactions').insert({
-      'sender_id': userId,
-      'receiver_id': userId,
+    await _supabase.from('ledger_entries').insert({
+      'user_id': userId,
       'amount': amount,
       'type': 'deposit',
       'status': 'pending',
+      'reference': reference,
       'description': 'Manual Bank Transfer: $reference',
-      'method': 'bank',
       'metadata': {
+        'method': 'bank',
         'receipt_url': receiptUrl,
-        'reference_code': reference,
       },
     });
   }
@@ -203,14 +202,15 @@ class TransactionService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _supabase.from('transactions').insert({
-      'sender_id': userId,
-      'receiver_id': userId,
+    await _supabase.from('ledger_entries').insert({
+      'user_id': userId,
       'amount': amount,
       'type': type,
       'status': 'pending',
       'description': description,
-      'method': method,
+      'metadata': {
+        'method': method,
+      },
     });
   }
 
@@ -306,23 +306,25 @@ class TransactionService {
 
     try {
       final response = await _supabase
-          .from('transactions')
-          .select('receiver_id, profiles!transactions_receiver_id_fkey(*)')
-          .eq('sender_id', userId)
+          .from('ledger_entries')
+          .select('metadata, description')
+          .eq('user_id', userId)
+          .eq('type', 'transfer')
           .eq('status', 'completed')
           .order('created_at', ascending: false)
-          .limit(20);
+          .limit(50);
 
       final List<VaultUser> users = [];
       final Set<String> seenIds = {};
 
       for (var item in (response as List)) {
-        final profile = item['profiles'];
-        if (profile != null) {
-          final user = VaultUser.fromJson(profile);
-          if (!seenIds.contains(user.id)) {
-            users.add(user);
-            seenIds.add(user.id);
+        final recipientId = item['metadata']?['recipient_id'] as String?;
+        if (recipientId != null && !seenIds.contains(recipientId)) {
+          // Fetch profile for this recipient
+          final profileResponse = await _supabase.from('profiles').select().eq('id', recipientId).single();
+          if (profileResponse != null) {
+            users.add(VaultUser.fromJson(profileResponse));
+            seenIds.add(recipientId);
           }
         }
         if (users.length >= 5) break;
@@ -373,9 +375,9 @@ class TransactionService {
     // 1. Velocity Check: Max 3 transactions in 5 minutes
     final fiveMinutesAgo = DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String();
     final recentTxs = await _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .select('id')
-        .eq('sender_id', userId)
+        .eq('user_id', userId)
         .gt('created_at', fiveMinutesAgo);
     
     if ((recentTxs as List).length >= 3) {
@@ -384,9 +386,9 @@ class TransactionService {
 
     // 2. Spike Check: Max 400% of last 10 transactions average
     final lastTenTxs = await _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .select('amount')
-        .eq('sender_id', userId)
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .limit(10);
     
@@ -412,8 +414,9 @@ class TransactionService {
     if (userId == null) return Stream.value(_getMockTransactions());
 
     return _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .map((data) {
           if (data.isEmpty) return _getMockTransactions();
@@ -435,9 +438,9 @@ class TransactionService {
 
     try {
       final response = await _supabase
-          .from('transactions')
-          .select('*, sender_profile:profiles!transactions_sender_id_fkey(*), receiver_profile:profiles!transactions_receiver_id_fkey(*)')
-          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .from('ledger_entries')
+          .select()
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
@@ -453,9 +456,9 @@ class TransactionService {
   void _refreshTransactionHistoryInBackground(String userId) async {
     try {
       final response = await _supabase
-          .from('transactions')
-          .select('*, sender_profile:profiles!transactions_sender_id_fkey(*), receiver_profile:profiles!transactions_receiver_id_fkey(*)')
-          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .from('ledger_entries')
+          .select()
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
