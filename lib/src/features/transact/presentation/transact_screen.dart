@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:vault_os/src/common_widgets/kyc_verification_dialog.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'deposit/deposit_setup_screen.dart';
 import 'package:flutter/material.dart';
@@ -174,6 +175,11 @@ class _TransactScreenState extends State<TransactScreen> {
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+          );
+        } else if (state is KycRequiredState) {
+          showDialog(
+            context: context,
+            builder: (_) => const KycVerificationDialog(),
           );
         }
       },

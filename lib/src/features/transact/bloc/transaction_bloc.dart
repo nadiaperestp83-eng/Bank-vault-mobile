@@ -85,6 +85,8 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         description: event.description,
       );
       emit(TransactionSuccess('Transfer successful!'));
+    } on KycRequiredException {
+      emit(KycRequiredState());
     } catch (e) {
       emit(TransactionError(e.toString()));
     }
@@ -107,6 +109,8 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       );
       
       emit(TransactionSuccess('STK Push sent! Please enter your M-Pesa PIN on your phone.', transactionId: checkoutId));
+    } on KycRequiredException {
+      emit(KycRequiredState());
     } catch (e) {
       emit(TransactionError(e.toString()));
     }
@@ -168,6 +172,8 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         details: event.details,
       );
       emit(TransactionSuccess('Withdrawal initiated successfully!'));
+    } on KycRequiredException {
+      emit(KycRequiredState());
     } catch (e) {
       emit(TransactionError(e.toString()));
     }

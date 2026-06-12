@@ -4,10 +4,26 @@ import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
 import 'transaction_cache.dart';
+import 'kyc_service.dart';
+
+class KycRequiredException implements Exception {
+  final String message;
+  KycRequiredException(this.message);
+  @override
+  String toString() => message;
+}
 
 class TransactionService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransactionCache _cache = TransactionCache();
+  final KycService _kycService = KycService();
+
+  Future<void> _checkKyc() async {
+    final isVerified = await _kycService.isUserVerified();
+    if (!isVerified) {
+      throw KycRequiredException('KYC verification required to perform this transaction.');
+    }
+  }
 
   String _hashPin(String pin) {
     final bytes = utf8.encode(pin);
@@ -39,6 +55,7 @@ class TransactionService {
     String? currency,
     String? description,
   }) async {
+    await _checkKyc();
     final senderId = _supabase.auth.currentUser?.id;
     if (senderId == null) throw Exception('User not authenticated');
 
@@ -46,9 +63,6 @@ class TransactionService {
       'p_sender_id': senderId,
       'p_recipient_tag': recipientTag,
       'p_amount': amount,
-      // Keeping these as they might be used by the RPC too, or I can remove them if I'm sure.
-      // But the user specifically mentioned those three.
-      // I'll stick to the user's three but keep currency if the RPC allows it.
     });
   }
 
@@ -56,6 +70,7 @@ class TransactionService {
     required String phoneNumber,
     required double amount,
   }) async {
+    await _checkKyc();
     final response = await _supabase.functions.invoke('mpesa-deposit', body: {
       'phoneNumber': phoneNumber,
       'amount': amount,
@@ -67,6 +82,9 @@ class TransactionService {
     required double amount,
     required String currency,
   }) async {
+    // KYC check might not be needed for simple payment intent creation, 
+    // but check it if required by business logic. 
+    // Assuming for now it's only needed for outgoing transfers/withdrawals.
     final response = await _supabase.functions.invoke('stripe-create-intent', body: {
       'amount': amount,
       'currency': currency,
@@ -81,6 +99,7 @@ class TransactionService {
     required String description,
     Map<String, dynamic>? details,
   }) async {
+    await _checkKyc();
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 

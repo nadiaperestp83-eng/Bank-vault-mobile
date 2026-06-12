@@ -44,3 +44,8 @@ class TransactionError extends TransactionState {
   @override
   List<Object?> get props => [message];
 }
+
+class KycRequiredState extends TransactionState {
+  @override
+  List<Object?> get props => [];
+}

@@ -30,7 +30,7 @@ class AiAdvisorBloc extends Bloc<AiAdvisorEvent, AiAdvisorState> {
   }
 
   void _onChatUpdated(ChatUpdated event, Emitter<AiAdvisorState> emit) {
-    emit(AiAdvisorLoaded(messages: event.messages));
+    emit(AiAdvisorLoaded(messages: event.messages, isTyping: false));
   }
 
   Future<void> _onSendMessageRequested(SendMessageRequested event, Emitter<AiAdvisorState> emit) async {
