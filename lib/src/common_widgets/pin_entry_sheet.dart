@@ -42,6 +42,7 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('DEBUG: PinEntrySheet build called. Current PIN length: ${_pin.length}');
     return Container(
       padding: const EdgeInsets.all(AppSizes.p24),
       decoration: const BoxDecoration(

@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
+import 'package:vault_os/src/utils/transaction_utils.dart';
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_bloc.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_event.dart';
@@ -22,6 +24,7 @@ class WithdrawalConfirmationScreen extends StatefulWidget {
 
 class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScreen> {
   bool _isProcessing = false;
+  final double _exchangeRate = 130.0;
 
   void _onConfirm() {
     showModalBottomSheet(
@@ -34,7 +37,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
           context.read<TransactionBloc>().add(PerformWithdrawal(
             amount: widget.amount,
             method: widget.details['provider'],
-            currency: 'USD', // Defaulting to USD as per the flow
+            currency: 'USD',
             description: widget.details['description'] ?? 'Withdrawal',
             details: widget.details,
             pin: pin,
@@ -53,8 +56,9 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
     final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
     final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
 
-    final fee = widget.amount * 0.01;
+    final fee = calculateTransactionFee(widget.amount);
     final total = widget.amount + fee;
+    final kesEquivalent = widget.amount * _exchangeRate;
 
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) {
@@ -68,6 +72,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
                 message: state.message,
                 details: widget.details,
                 amount: widget.amount,
+                transactionId: state.transactionId,
               ),
             ),
             (route) => route.isFirst,
@@ -97,7 +102,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSummaryCard(fee, total, secondaryTextColor, primaryTextColor, surfaceColor, borderColor),
+                  _buildSummaryCard(fee, total, kesEquivalent, secondaryTextColor, primaryTextColor, surfaceColor, borderColor),
                   const SizedBox(height: 32),
                   const Text('Destination', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 16),
@@ -114,7 +119,7 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
     );
   }
 
-  Widget _buildSummaryCard(double fee, double total, Color secondaryTextColor, Color primaryTextColor, Color surfaceColor, Color borderColor) {
+  Widget _buildSummaryCard(double fee, double total, double kesEquivalent, Color secondaryTextColor, Color primaryTextColor, Color surfaceColor, Color borderColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -136,6 +141,18 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
           Text(
             CurrencyFormatter.format(total, 'USD'),
             style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: primaryTextColor),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '≈ ${CurrencyFormatter.format(kesEquivalent, 'KES')}',
+              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
           const Divider(height: 48),
           _summaryRow('Withdrawal Amount', CurrencyFormatter.format(widget.amount, 'USD'), secondaryTextColor, primaryTextColor),
@@ -217,24 +234,27 @@ class _WithdrawalConfirmationScreenState extends State<WithdrawalConfirmationScr
   }
 
   Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.8),
-      width: double.infinity,
-      height: double.infinity,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
-            const SizedBox(height: 24),
-            const Text(
-              'Authorizing Withdrawal...',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, decoration: TextDecoration.none),
-            ).animate(onPlay: (controller) => controller.repeat())
-             .fadeIn(duration: 1.seconds)
-             .then()
-             .fadeOut(duration: 1.seconds),
-          ],
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        width: double.infinity,
+        height: double.infinity,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
+              const SizedBox(height: 24),
+              const Text(
+                'Authorizing Withdrawal...',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, decoration: TextDecoration.none),
+              ).animate(onPlay: (controller) => controller.repeat())
+               .fadeIn(duration: 1.seconds)
+               .then()
+               .fadeOut(duration: 1.seconds),
+            ],
+          ),
         ),
       ),
     );

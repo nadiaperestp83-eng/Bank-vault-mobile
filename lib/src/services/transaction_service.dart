@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
 
@@ -213,19 +214,24 @@ class TransactionService {
 
   Future<String?> initiateMpesaDeposit({
     required String phoneNumber,
-    required double amount,
+    required double walletCredit,
+    required double kesEquivalent,
   }) async {
     final formattedPhone = formatPhoneNumber(phoneNumber);
+    debugPrint('DEBUG: Service calling mpesa-deposit for $formattedPhone, amount: $kesEquivalent');
     final response = await _supabase.functions.invoke('mpesa-deposit', body: {
       'phoneNumber': formattedPhone,
-      'amount': amount,
+      'amount': kesEquivalent,
     });
     
+    debugPrint('DEBUG: mpesa-deposit response status: ${response.status}');
+    debugPrint('DEBUG: mpesa-deposit response data: ${response.data}');
+
     final checkoutId = response.data?['CheckoutRequestID'] as String?;
     if (checkoutId != null) {
       await createPendingTransaction(
         type: 'deposit',
-        amount: amount,
+        amount: walletCredit,
         description: checkoutId,
         method: 'mpesa',
       );
@@ -236,12 +242,18 @@ class TransactionService {
   Future<Map<String, dynamic>> createStripePaymentIntent({
     required double amount,
     required String currency,
+    List<String>? paymentMethodTypes,
   }) async {
+    debugPrint('DEBUG: Service calling stripe-create-intent for \$${amount.toStringAsFixed(2)} $currency');
     final response = await _supabase.functions.invoke('stripe-create-intent', body: {
       'amount': amount,
       'currency': currency,
+      'payment_method_types': paymentMethodTypes,
     });
     
+    debugPrint('DEBUG: stripe-create-intent response status: ${response.status}');
+    debugPrint('DEBUG: stripe-create-intent response data: ${response.data}');
+
     final intentData = response.data as Map<String, dynamic>;
     final intentId = intentData['id'] as String?;
     
@@ -352,7 +364,42 @@ class TransactionService {
     if (amount > balance) {
       throw Exception('Insufficient balance');
     }
-    // Added 1% fee check for withdrawals in logic if needed, but for now basic limit
+
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    // 1. Velocity Check: Max 3 transactions in 5 minutes
+    final fiveMinutesAgo = DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String();
+    final recentTxs = await _supabase
+        .from('transactions')
+        .select('id')
+        .eq('sender_id', userId)
+        .gt('created_at', fiveMinutesAgo);
+    
+    if ((recentTxs as List).length >= 3) {
+      throw Exception('Velocity limit exceeded. Please wait a few minutes.');
+    }
+
+    // 2. Spike Check: Max 400% of last 10 transactions average
+    final lastTenTxs = await _supabase
+        .from('transactions')
+        .select('amount')
+        .eq('sender_id', userId)
+        .order('created_at', ascending: false)
+        .limit(10);
+    
+    final txList = lastTenTxs as List;
+    if (txList.isNotEmpty) {
+      double sum = 0;
+      for (var tx in txList) {
+        sum += (tx['amount'] as num).toDouble();
+      }
+      double average = sum / txList.length;
+      if (amount > average * 4) {
+        throw Exception('Transaction spike detected. Please contact support for large withdrawals.');
+      }
+    }
+
     if (amount > 100000) {
       throw Exception('Amount exceeds daily limit for unverified users');
     }

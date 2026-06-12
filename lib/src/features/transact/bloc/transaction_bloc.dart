@@ -122,8 +122,9 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       emit(TransactionInProgress('Requesting M-Pesa STK Push...'));
       final checkoutId = await transactionService.initiateMpesaDeposit(
         phoneNumber: event.phoneNumber,
-        amount: event.amount,
-      );
+        walletCredit: event.walletCredit,
+        kesEquivalent: event.kesEquivalent,
+      ).timeout(const Duration(seconds: 30));
       
       if (checkoutId != null) {
         _currentTransactionId = checkoutId;
@@ -164,7 +165,8 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       final intentData = await transactionService.createStripePaymentIntent(
         amount: event.amount,
         currency: event.currency,
-      );
+        paymentMethodTypes: event.paymentMethodTypes,
+      ).timeout(const Duration(seconds: 30));
       
       final intentId = intentData['id'] as String?;
       if (intentId != null) {

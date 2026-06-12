@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -10,6 +11,7 @@ import 'package:vault_os/src/features/transact/bloc/transaction_event.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide BankAccount;
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/services/transaction_service.dart';
 import 'package:vault_os/src/models/vault_models.dart';
@@ -25,38 +27,54 @@ class DepositSetupScreen extends StatefulWidget {
 class _DepositSetupScreenState extends State<DepositSetupScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _accountNumberController = TextEditingController();
   final TransactionService _txService = TransactionService();
-  List<BankAccount> _userAccounts = [];
+  
+  late String _selectedMethod;
   List<Map<String, dynamic>> _systemAccounts = [];
-  BankAccount? _selectedAccount;
+  String? _selectedBankName;
   String? _referenceCode;
+  Map<String, dynamic>? _selectedBankToLink;
+  bool _isLoading = false;
   bool _isLoadingAccounts = false;
+  bool _isProcessing = false;
+  String _processingMessage = 'Securing your connection...';
   VaultUser? _currentUser;
+  List<BankAccount> _userAccounts = [];
   bool _isAddingNew = false;
   bool _rememberNumber = false;
-  Map<String, String>? _selectedBankToLink;
+  bool _isUsd = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    _selectedMethod = widget.method;
     _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
-    setState(() => _isLoadingAccounts = true);
+    setState(() => _isLoading = true);
     try {
-      if (widget.method == 'bank') {
-        _userAccounts = await _txService.getUserBankAccounts();
-        _systemAccounts = await _txService.getSystemBankAccounts();
-        _referenceCode = _txService.generateReferenceCode();
-      }
-      _currentUser = await _txService.getCurrentUserProfile();
+      // Load system accounts and reference code regardless of initial method
+      // so it's ready if the user switches tabs.
+      final results = await Future.wait([
+        _txService.getSystemBankAccounts(),
+        _txService.getCurrentUserProfile(),
+      ]);
+      
+      _systemAccounts = results[0] as List<Map<String, dynamic>>;
+      _currentUser = results[1] as VaultUser?;
+      _referenceCode = _txService.generateReferenceCode();
+
       if (_currentUser?.phoneNumber != null) {
         _phoneController.text = _currentUser!.phoneNumber!;
       }
+    } catch (e) {
+      debugPrint('Error loading initial data: $e');
     } finally {
-      if (mounted) setState(() => _isLoadingAccounts = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -64,6 +82,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   void dispose() {
     _amountController.dispose();
     _phoneController.dispose();
+    _searchController.dispose();
     _accountNumberController.dispose();
     super.dispose();
   }
@@ -134,56 +153,73 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   }
 
   void _onDeposit() {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    if (amount <= 0) return;
+    debugPrint('DEBUG: _onDeposit called. Method: $_selectedMethod, Bank: $_selectedBankName');
+    HapticFeedback.lightImpact();
+    
+    final amountStr = _amountController.text;
+    final amount = double.tryParse(amountStr) ?? 0.0;
+    
+    debugPrint('DEBUG: Amount string: "$amountStr", parsed: $amount');
 
-    if (widget.method == 'bank' && _selectedAccount == null) {
+    if (amount <= 0) {
+      debugPrint('DEBUG: Amount is <= 0. Showing SnackBar.');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or link a bank account'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter a valid amount greater than 0'), backgroundColor: Colors.orange),
       );
       return;
     }
+
+    if (_selectedMethod == 'bank' && _selectedBankName == null) {
+      debugPrint('DEBUG: Method is bank but no bank selected. Showing SnackBar.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a bank from the list to proceed'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    debugPrint('DEBUG: Proceeding to show PIN sheet.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Opening secure PIN entry...'), duration: Duration(milliseconds: 500)),
+    );
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PinEntrySheet(
-        onConfirm: (pin) async {
-          final isPinValid = await _txService.verifyPin(pin);
-          if (!isPinValid) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invalid Transaction PIN'), backgroundColor: Colors.red),
-            );
-            return;
-          }
+        onConfirm: (pin) {
+          debugPrint('DEBUG: PIN entered and confirmed in UI. Proceeding to BLoC.');
+          Navigator.pop(context); // Close PIN sheet
+          
+          final amountStr = _amountController.text;
+          final amount = double.tryParse(amountStr) ?? 0.0;
+          final walletCredit = _isUsd ? amount : amount / 130.0;
+          final kesEquivalent = _isUsd ? amount * 130.0 : amount;
 
-          if (widget.method == 'mpesa') {
+          if (_selectedMethod == 'mpesa') {
             final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
-            if (_isAddingNew && _rememberNumber) {
-              await _txService.updateProfilePhoneNumber(phoneNumber);
-            }
-            if (mounted) {
-              context.read<TransactionBloc>().add(PerformMpesaDeposit(
-                phoneNumber: phoneNumber,
-                amount: amount,
-                pin: pin,
-              ));
-            }
-          } else if (widget.method == 'card') {
+            debugPrint('DEBUG: Starting M-Pesa deposit for $phoneNumber');
+            context.read<TransactionBloc>().add(PerformMpesaDeposit(
+              phoneNumber: phoneNumber,
+              walletCredit: walletCredit,
+              kesEquivalent: kesEquivalent,
+              pin: pin,
+            ));
+          } else if (_selectedMethod == 'card') {
+            debugPrint('DEBUG: Starting Stripe Card deposit for \$${walletCredit.toStringAsFixed(2)}');
             context.read<TransactionBloc>().add(PerformStripeDeposit(
-              amount: amount,
+              amount: walletCredit,
               currency: 'USD',
               pin: pin,
             ));
-          } else if (widget.method == 'bank') {
-            if (_selectedAccount?.stripeBankAccountId != null) {
-              // Stripe ACH Flow
-              await _txService.createStripeAchIntent(amount: amount, currency: 'USD');
-              if (mounted) Navigator.pop(context);
-            } else {
-              // Manual Bank Transfer logic would normally go here or via "I have sent" button
-            }
+          } else if (_selectedMethod == 'bank') {
+            debugPrint('DEBUG: Starting Stripe Bank deposit for \$${walletCredit.toStringAsFixed(2)}');
+            context.read<TransactionBloc>().add(PerformStripeDeposit(
+              amount: walletCredit,
+              currency: 'USD',
+              pin: pin,
+              paymentMethodTypes: const ['us_bank_account'],
+            ));
           }
         },
       ),
@@ -197,46 +233,140 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
-    return BlocListener<TransactionBloc, TransactionState>(
-      listener: (context, state) {
-        if (state is TransactionSuccess) {
-          Navigator.pop(context); // Close setup
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.green),
-          );
-        } else if (state is TransactionError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
-        } else if (state is TransactionTimeout) {
-          Navigator.pop(context); // Close setup as it's pending
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.orange),
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text('${widget.method.toUpperCase()} Deposit', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
-            onPressed: () => Navigator.pop(context),
+    return Stack(
+      children: [
+        BlocListener<TransactionBloc, TransactionState>(
+          listener: (context, state) async {
+            debugPrint('DEBUG: BlocListener received state: $state');
+            if (state is TransactionSuccess) {
+              debugPrint('DEBUG: TransactionSuccess received. Message: ${state.message}');
+              setState(() => _isProcessing = false);
+              
+              if (state.message.contains('Stripe')) {
+                debugPrint('DEBUG: Stripe flow detected. Transaction ID (Secret): ${state.transactionId}');
+                if (Stripe.publishableKey.isEmpty) {
+                   debugPrint('DEBUG: CRITICAL ERROR: Stripe.publishableKey is EMPTY!');
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('Configuration Error: Stripe Key missing'), backgroundColor: Colors.red),
+                   );
+                   setState(() => _isProcessing = false);
+                   return;
+                }
+                try {
+                  debugPrint('DEBUG: Initializing Stripe Payment Sheet...');
+                  await Stripe.instance.initPaymentSheet(
+                    paymentSheetParameters: SetupPaymentSheetParameters(
+                      paymentIntentClientSecret: state.transactionId!,
+                      merchantDisplayName: 'Vault OS',
+                      applePay: const PaymentSheetApplePay(merchantCountryCode: 'US'),
+                      googlePay: const PaymentSheetGooglePay(merchantCountryCode: 'US'),
+                      style: Theme.of(context).brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+                    ),
+                  );
+                  debugPrint('DEBUG: Stripe Payment Sheet Initialized. Presenting...');
+                  await Stripe.instance.presentPaymentSheet();
+                  debugPrint('DEBUG: Stripe Payment Sheet Presented successfully.');
+                  
+                  // Show processing message instead of success, as we wait for the webhook
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Payment authorized! Processing your deposit...'),
+                      backgroundColor: Colors.blue,
+                      duration: Duration(seconds: 5),
+                    ),
+                  );
+                  setState(() => _isProcessing = true);
+                } catch (e) {
+                  debugPrint('DEBUG: Stripe Error caught: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Payment Failed or Cancelled: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              } else if (state.message.contains('STK Push sent')) {
+                 debugPrint('DEBUG: M-Pesa flow detected. Awaiting PIN...');
+                 setState(() => _isAwaitingMpesa = true);
+              } else {
+                debugPrint('DEBUG: Regular TransactionSuccess. Showing overlay.');
+                _showSuccessOverlay(state.message);
+              }
+            } else if (state is TransactionError) {
+              debugPrint('DEBUG: TransactionError received: ${state.message}');
+              setState(() {
+                _isProcessing = false;
+                _isAwaitingMpesa = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
+            } else if (state is TransactionInProgress) {
+              debugPrint('DEBUG: TransactionInProgress received. Message: ${state.message}');
+              setState(() {
+                _isProcessing = true;
+                _processingMessage = state.message;
+              });
+            }
+          },
+          child: Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            appBar: AppBar(
+              title: const Text('Deposit Funds', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSizes.p24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMethodSegmentedControl(),
+                  const SizedBox(height: 32),
+                  _buildAmountInput(secondaryTextColor),
+                  const SizedBox(height: 32),
+                  if (_selectedMethod == 'mpesa') _buildMpesaField(isDark),
+                  if (_selectedMethod == 'bank') _buildBankFlow(isDark, secondaryTextColor, primaryTextColor),
+                  if (_selectedMethod == 'card') _buildCardInfo(secondaryTextColor),
+                  const SizedBox(height: 48),
+                  _buildActionButton(),
+                ],
+              ),
+            ),
           ),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.p24),
+        if (_isProcessing) _buildProcessingOverlay(),
+        if (_isAwaitingMpesa) _buildMpesaWaitingOverlay(),
+      ],
+    );
+  }
+
+  bool _isAwaitingMpesa = false;
+
+  Widget _buildProcessingOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildAmountInput(secondaryTextColor),
-              const SizedBox(height: 32),
-              if (widget.method == 'mpesa') _buildMpesaField(isDark),
-              if (widget.method == 'bank') _buildBankFlow(isDark, secondaryTextColor, primaryTextColor),
+              const Icon(LucideIcons.loader2, color: AppColors.primary, size: 40)
+                  .animate(onPlay: (controller) => controller.repeat())
+                  .rotate(duration: 1.seconds),
+              const SizedBox(height: 24),
+              Text(
+                _processingMessage,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+              ).animate().fadeIn().scale(),
               const SizedBox(height: 48),
-              _buildActionButton(),
+              TextButton.icon(
+                onPressed: () => setState(() => _isProcessing = false),
+                icon: const Icon(LucideIcons.x, color: Colors.white54, size: 16),
+                label: const Text('Cancel & Return', style: TextStyle(color: Colors.white54)),
+              ),
             ],
           ),
         ),
@@ -244,29 +374,192 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     );
   }
 
+  Widget _buildMpesaWaitingOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.8),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildPingingSmartphone(),
+              const SizedBox(height: 32),
+              const Text(
+                'Waiting for M-Pesa PIN...',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please check your phone for the STK prompt',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 48),
+              TextButton(
+                onPressed: () => setState(() => _isAwaitingMpesa = false),
+                child: const Text('Cancel & Close', style: TextStyle(color: Colors.white54)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPingingSmartphone() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ...List.generate(3, (index) {
+          return Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 2),
+            ),
+          ).animate(onPlay: (c) => c.repeat())
+           .scale(begin: const Offset(1, 1), end: const Offset(2.5, 2.5), duration: 2.seconds, delay: (index * 600).ms)
+           .fadeOut(duration: 2.seconds);
+        }),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(LucideIcons.smartphone, color: Colors.white, size: 40),
+        ).animate(onPlay: (c) => c.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 1.seconds),
+      ],
+    );
+  }
+
+  Widget _buildMethodSegmentedControl() {
+    final methods = [
+      {'id': 'mpesa', 'label': 'Mobile', 'icon': LucideIcons.phone},
+      {'id': 'bank', 'label': 'Bank', 'icon': LucideIcons.landmark},
+      {'id': 'card', 'label': 'Card', 'icon': LucideIcons.creditCard},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: methods.map((m) {
+          final isSelected = _selectedMethod == m['id'];
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedMethod = m['id'] as String),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(m['icon'] as IconData, size: 16, color: isSelected ? Colors.white : AppColors.textSecondaryLight),
+                    const SizedBox(width: 8),
+                    Text(
+                      m['label'] as String,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: isSelected ? Colors.white : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildAmountInput(Color secondaryTextColor) {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final kesEquivalent = amount * 130.0;
+    final exchangeRate = 130.0;
+    final converted = _isUsd ? amount * exchangeRate : amount / exchangeRate;
+    final settlementLabel = _isUsd ? 'KES' : 'USD';
 
     return GlassCard(
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Text('Enter Amount (USD)', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
-          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Enter Amount', style: TextStyle(color: secondaryTextColor, fontSize: 13, fontWeight: FontWeight.w500)),
+              Container(
+                decoration: BoxDecoration(color: Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  children: [
+                    _buildCurrencyToggle('USD'),
+                    _buildCurrencyToggle('KES'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
           TextField(
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textAlign: TextAlign.center,
             onChanged: (v) => setState(() {}),
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(hintText: '0.00', border: InputBorder.none),
+            style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300, letterSpacing: -1),
+            decoration: InputDecoration(
+              hintText: '0.00',
+              hintStyle: TextStyle(color: secondaryTextColor.withOpacity(0.3)),
+              border: InputBorder.none,
+              prefixText: _isUsd ? '\$ ' : 'KSh ',
+              prefixStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary.withOpacity(0.5)),
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '≈ ${CurrencyFormatter.format(kesEquivalent, 'KES')}',
-            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green.withOpacity(0.1)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Settlement Amount: ', style: TextStyle(fontSize: 12, color: Colors.green)),
+                Text(
+                  CurrencyFormatter.format(converted, settlementLabel),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green),
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencyToggle(String code) {
+    final isSelected = (_isUsd && code == 'USD') || (!_isUsd && code == 'KES');
+    return GestureDetector(
+      onTap: () => setState(() => _isUsd = code == 'USD'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)] : [],
+        ),
+        child: Text(code, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight)),
       ),
     );
   }
@@ -296,7 +589,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
                     child: const Icon(LucideIcons.phone, color: AppColors.primary, size: 20),
                   ),
                   const SizedBox(width: 16),
@@ -348,113 +641,132 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_selectedBankToLink != null) ...[
-          Text('Linking ${_selectedBankToLink!['name']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _accountNumberController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: 'Account Number',
-              filled: true,
-              fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => setState(() => _selectedBankToLink = null),
-                  child: const Text('Cancel'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _onLinkBank,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text('Link Account'),
-                ),
-              ),
-            ],
-          ),
-        ] else ...[
-          const Text('Select Bank Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 12),
-          if (_userAccounts.isEmpty)
-            GestureDetector(
-              onTap: _showBankSelectionSheet,
-              child: GlassCard(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(LucideIcons.landmark, color: secondaryTextColor, size: 32),
-                      const SizedBox(height: 12),
-                      const Text('No Bank Accounts Linked', style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('Link an account for instant ACH deposits', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                      const SizedBox(height: 16),
-                      TextButton(onPressed: _showBankSelectionSheet, child: const Text('Link New Bank')),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            Column(
-              children: [
-                ..._userAccounts.map((acc) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedAccount = acc),
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(16),
-                      border: _selectedAccount?.id == acc.id ? Border.all(color: AppColors.primary, width: 2) : null,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                            child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                              Text('****${acc.accountNumber.substring(acc.accountNumber.length - 4)}', 
-                                style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                            ],
-                          ),
-                          const Spacer(),
-                          if (_selectedAccount?.id == acc.id)
-                            const Icon(LucideIcons.checkCircle2, color: AppColors.primary, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                )).toList(),
-                TextButton.icon(
-                  onPressed: _showBankSelectionSheet,
-                  icon: const Icon(LucideIcons.plus, size: 16),
-                  label: const Text('Link Another Bank'),
-                ),
-              ],
-            ),
-        ],
-        
+        const Text('Select Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 16),
+        _buildBankSearchGrid(isDark, secondaryTextColor),
         const SizedBox(height: 32),
         const Text('Manual Bank Transfer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 12),
         _buildManualBankInfo(secondaryTextColor),
       ],
+    );
+  }
+
+  Widget _buildBankSearchGrid(bool isDark, Color secondaryTextColor) {
+    final banks = _txService.getSupportedBanks().where((b) => b['name']!.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          onChanged: (v) => setState(() => _searchQuery = v),
+          decoration: InputDecoration(
+            hintText: 'Search Kenyan Banks...',
+            prefixIcon: const Icon(LucideIcons.search, size: 18),
+            filled: true,
+            fillColor: Colors.black.withValues(alpha: 0.05),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 2.5,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: banks.length,
+          itemBuilder: (context, index) {
+            final bank = banks[index];
+            final isSelected = _selectedBankName == bank['name'];
+            return InkWell(
+              onTap: () {
+                debugPrint('DEBUG: Bank selected: ${bank['name']}');
+                setState(() => _selectedBankName = bank['name']);
+              },
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                      child: const Center(child: Icon(LucideIcons.landmark, size: 14, color: AppColors.primary)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(bank['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showSuccessOverlay(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: GlassCard(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.checkCircle2, color: Colors.green, size: 64).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
+                const SizedBox(height: 24),
+                const Text('Success!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+                const SizedBox(height: 8),
+                Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondaryLight)),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Return to dashboard
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Back to Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardInfo(Color secondaryTextColor) {
+    return GlassCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Icon(LucideIcons.creditCard, size: 48, color: secondaryTextColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 16),
+          const Text('Stripe Secure Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          Text(
+            'Your card details are encrypted and never stored on our servers.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: secondaryTextColor, fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 
@@ -492,7 +804,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -507,7 +819,9 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: () {
-            // Logic to pick image and upload receipt
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Receipt upload coming soon. Please keep your transaction message for manual verification.'), backgroundColor: AppColors.primary),
+            );
           },
           icon: const Icon(LucideIcons.upload, size: 18),
           label: const Text('I have sent the funds (Upload Receipt)'),
@@ -523,9 +837,13 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   Widget _buildActionButton() {
     return BlocBuilder<TransactionBloc, TransactionState>(
       builder: (context, state) {
+        debugPrint('DEBUG: _buildActionButton current state: $state');
         final isLoading = state is TransactionInProgress || state is TransactionLoading;
         return ElevatedButton(
-          onPressed: isLoading ? null : _onDeposit,
+          onPressed: isLoading ? null : () {
+            debugPrint('DEBUG: ElevatedButton onPressed triggered');
+            _onDeposit();
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
@@ -534,7 +852,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
           ),
           child: isLoading 
             ? const CircularProgressIndicator(color: Colors.white)
-            : Text('Deposit with ${widget.method.toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            : Text('Deposit with ${_selectedMethod.toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
         );
       },
     );

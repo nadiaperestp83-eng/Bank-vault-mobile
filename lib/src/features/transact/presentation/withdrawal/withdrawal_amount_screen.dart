@@ -159,7 +159,7 @@ class _WithdrawalAmountScreenState extends State<WithdrawalAmountScreen> {
         elevation: isValid ? 10 : 0,
         shadowColor: AppColors.primary.withValues(alpha: 0.4),
       ),
-      child: const Text('Continue to Bank Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      child: const Text('Continue to Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
     );
   }
 }
