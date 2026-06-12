@@ -29,3 +29,54 @@ class UpdateReceipts extends DashboardEvent {
   @override
   List<Object?> get props => [receipts];
 }
+
+class UpdateProfile extends DashboardEvent {
+  final VaultUser user;
+  UpdateProfile(this.user);
+  @override
+  List<Object?> get props => [user];
+}
+
+class UpdateTransactions extends DashboardEvent {
+  final List<VaultTransaction> transactions;
+  UpdateTransactions(this.transactions);
+  @override
+  List<Object?> get props => [transactions];
+}
+
+class UpdateGrowthData extends DashboardEvent {
+  final Map<String, dynamic> growthData;
+  UpdateGrowthData(this.growthData);
+  @override
+  List<Object?> get props => [growthData];
+}
+
+class UpdateFrequentContacts extends DashboardEvent {
+  final List<VaultUser> frequentContacts;
+  UpdateFrequentContacts(this.frequentContacts);
+  @override
+  List<Object?> get props => [frequentContacts];
+}
+
+class UpdateSuggestedUsers extends DashboardEvent {
+  final List<VaultUser> suggestedUsers;
+  UpdateSuggestedUsers(this.suggestedUsers);
+  @override
+  List<Object?> get props => [suggestedUsers];
+}
+
+class UpdateAIInsight extends DashboardEvent {
+  final String? insight;
+  UpdateAIInsight(this.insight);
+  @override
+  List<Object?> get props => [insight];
+}
+
+class UpdateCurrencyRates extends DashboardEvent {
+  final Map<String, double> currencyRates;
+  UpdateCurrencyRates(this.currencyRates);
+  @override
+  List<Object?> get props => [currencyRates];
+}
+
+class RefreshAIInsight extends DashboardEvent {}

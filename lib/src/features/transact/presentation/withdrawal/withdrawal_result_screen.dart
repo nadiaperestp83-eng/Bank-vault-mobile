@@ -64,16 +64,17 @@ class WithdrawalResultScreen extends StatelessWidget {
   }
 
   Widget _buildStatusIcon() {
+    final statusColor = isSuccess ? AppColors.success : AppColors.error;
     return Container(
       width: 100,
       height: 100,
       decoration: BoxDecoration(
-        color: isSuccess ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+        color: statusColor.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(
         isSuccess ? LucideIcons.checkCircle2 : LucideIcons.zap,
-        color: isSuccess ? Colors.green : Colors.red,
+        color: statusColor,
         size: 56,
       ),
     ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack).shake(delay: 500.ms);

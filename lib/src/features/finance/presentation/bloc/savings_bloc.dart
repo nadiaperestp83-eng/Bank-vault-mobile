@@ -23,6 +23,8 @@ class SavingsBloc extends Bloc<SavingsEvent, SavingsState> {
   }
 
   Future<void> _onFetchGoalsRequested(FetchGoalsRequested event, Emitter<SavingsState> emit) async {
+    if (state is SavingsLoaded && _goalsSubscription != null) return;
+    
     emit(SavingsLoading());
     await _goalsSubscription?.cancel();
     _goalsSubscription = _savingsService.watchGoals().listen(

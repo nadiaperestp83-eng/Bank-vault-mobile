@@ -22,6 +22,7 @@ class DashboardLoaded extends DashboardState {
   final List<VaultUser> suggestedUsers;
   final String? latestInsight;
   final Map<String, double> currencyRates;
+  final DateTime lastUpdated;
 
   DashboardLoaded({
     required this.user,
@@ -33,6 +34,7 @@ class DashboardLoaded extends DashboardState {
     required this.frequentContacts,
     required this.suggestedUsers,
     required this.currencyRates,
+    required this.lastUpdated,
     this.latestInsight,
   });
 
@@ -48,6 +50,7 @@ class DashboardLoaded extends DashboardState {
         suggestedUsers,
         latestInsight,
         currencyRates,
+        lastUpdated,
       ];
 }
 

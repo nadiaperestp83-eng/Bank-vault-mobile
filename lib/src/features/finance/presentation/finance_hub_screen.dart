@@ -182,7 +182,7 @@ class FinanceHubScreen extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
               color: gradient[0].withValues(alpha: 0.1),
@@ -195,10 +195,10 @@ class FinanceHubScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(32),
           child: Stack(
             children: [
-              // Background Gradient
+              // Background
               Positioned.fill(
                 child: Container(
-                  color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
                 ),
               ),
               

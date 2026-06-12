@@ -19,6 +19,8 @@ class AiAdvisorBloc extends Bloc<AiAdvisorEvent, AiAdvisorState> {
   }
 
   Future<void> _onFetchChatRequested(FetchChatRequested event, Emitter<AiAdvisorState> emit) async {
+    if (state is AiAdvisorLoaded && _messagesSubscription != null) return;
+
     emit(AiAdvisorLoading());
     await _messagesSubscription?.cancel();
     _messagesSubscription = _aiAdvisorService.watchMessages().listen(

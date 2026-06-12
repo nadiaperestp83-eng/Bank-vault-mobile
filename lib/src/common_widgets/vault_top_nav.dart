@@ -262,15 +262,12 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                           return const Center(child: Text('No notifications yet'));
                         }
                         
-                        // Sort by date descending
-                        final sortedLogs = [...logs]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                        
                         return ListView.separated(
                           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
-                          itemCount: sortedLogs.length,
+                          itemCount: logs.length,
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (context, index) {
-                            final log = sortedLogs[index];
+                            final log = logs[index];
                             return _buildNotificationItem(context, ref, log);
                           },
                         );
@@ -451,15 +448,12 @@ class VaultTopNav extends ConsumerWidget implements PreferredSizeWidget {
                           return const Center(child: Text('No receipts found'));
                         }
 
-                        // Sort by date descending
-                        final sorted = [...receipts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
                         return ListView.separated(
                           padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
-                          itemCount: sorted.length,
+                          itemCount: receipts.length,
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (context, index) {
-                            final receipt = sorted[index];
+                            final receipt = receipts[index];
                             return _buildReceiptItem(context, receipt);
                           },
                         );

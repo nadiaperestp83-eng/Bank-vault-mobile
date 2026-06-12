@@ -226,7 +226,31 @@ class DashboardService {
           );
         }));
 
-        return combined;
+        // Sort by date descending (newest first)
+        combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        // Filter and Deduplicate
+        final filtered = <VaultNotification>[];
+        for (final n in combined) {
+          final title = n.title.toLowerCase();
+
+          // Rule 1: Remove "Biometric login" and generic "Login" completely as requested
+          if (title.contains('biometric login') || title == 'login') continue;
+
+          // Rule 2: Deduplicate remaining login alerts (e.g., "Account Login") if multiple occur within 10 seconds
+          if (title.contains('account login')) {
+            final isDuplicate = filtered.any((existing) {
+              final existingTitle = existing.title.toLowerCase();
+              return existingTitle.contains('account login') &&
+                     (existing.createdAt.difference(n.createdAt).inSeconds.abs() < 10);
+            });
+            if (isDuplicate) continue;
+          }
+
+          filtered.add(n);
+        }
+
+        return filtered;
       },
     );
   }
@@ -257,9 +281,11 @@ class DashboardService {
         .from('receipts')
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
-        .map((data) => data
-            .map((json) => VaultReceipt.fromJson(json))
-            .toList());
+        .map((data) {
+          final receipts = data.map((json) => VaultReceipt.fromJson(json)).toList();
+          receipts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return receipts;
+        });
   }
 
   Future<List<VaultReceipt>> getReceipts({int limit = 20, int offset = 0}) async {

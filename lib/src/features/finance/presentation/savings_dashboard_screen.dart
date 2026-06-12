@@ -182,6 +182,8 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Center(
       child: Column(
         children: [
@@ -200,7 +202,9 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
           Text(
             'Your wealth starts with a plan.\nCreate your first savings goal now.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondaryLight.withValues(alpha: 0.7)),
+            style: TextStyle(
+              color: (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight).withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -284,9 +288,9 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
@@ -535,6 +539,8 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
   }
 
   Widget _buildAITipWidget() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -556,9 +562,13 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Users who set automated contributions are 3x more likely to hit their goals on time. Consider enabling weekly recurring deposits.',
-            style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textPrimaryLight),
+            style: TextStyle(
+              fontSize: 14, 
+              height: 1.5, 
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
           ),
         ],
       ).animate().shimmer(duration: 2.seconds, color: Colors.white.withValues(alpha: 0.2)),

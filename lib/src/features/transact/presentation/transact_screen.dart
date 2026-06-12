@@ -13,11 +13,15 @@ import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/utils/logo_mapper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vault_os/src/services/dashboard_service.dart';
 import '../bloc/transaction_bloc.dart';
 import '../bloc/transaction_event.dart';
 import '../bloc/transaction_state.dart';
 import '../../../models/vault_models.dart';
+
+import 'package:vault_os/src/services/biometric_service.dart';
+import 'package:vault_os/src/services/storage_service.dart';
 
 class TransactScreen extends StatefulWidget {
   const TransactScreen({super.key});
@@ -34,6 +38,8 @@ class _TransactScreenState extends State<TransactScreen> {
   final TextEditingController _recipientController = TextEditingController();
   VaultUser? _selectedRecipient;
   final DashboardService _dashboardService = DashboardService();
+  final BiometricService _biometricService = BiometricService();
+  final StorageService _storageService = StorageService();
   Wallet? _currentWallet;
   StreamSubscription? _walletSubscription;
 
@@ -65,10 +71,39 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  void _handleTransaction() {
+  void _handleTransaction() async {
     HapticFeedback.lightImpact();
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) return;
+
+    // For Vault transfers (Tab 0), try biometrics first if enabled
+    if (_activeTab == 0 && _selectedRecipient != null) {
+      final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+      final isBiometricEnabled = await _storageService.isBiometricEnabled();
+
+      if (isBiometricAvailable && isBiometricEnabled) {
+        final authenticated = await _biometricService.authenticate(
+          reason: 'Authenticate to send $_selectedCurrency $amount to ${_selectedRecipient!.firstName ?? _selectedRecipient!.kycTag}',
+        );
+
+        if (authenticated) {
+          final credentials = await _storageService.getCredentials();
+          final storedPin = credentials['pin'];
+
+          if (storedPin != null) {
+            if (mounted) {
+              context.read<TransactionBloc>().add(PerformVaultTransfer(
+                recipientTag: _selectedRecipient!.kycTag!,
+                amount: amount,
+                currency: _selectedCurrency,
+                pin: storedPin,
+              ));
+            }
+            return;
+          }
+        }
+      }
+    }
 
     _showPinSheet((pin) async {
       if (_activeTab == 0) {
@@ -123,16 +158,16 @@ class _TransactScreenState extends State<TransactScreen> {
               );
               await Stripe.instance.presentPaymentSheet();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Payment Successful!'), backgroundColor: Colors.green),
+                const SnackBar(content: Text('Payment Successful!'), backgroundColor: AppColors.success),
               );
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Payment Cancelled/Failed: $e'), backgroundColor: Colors.red),
+                SnackBar(content: Text('Payment Cancelled/Failed: $e'), backgroundColor: AppColors.error),
               );
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
             );
           }
           _amountController.clear();
@@ -141,12 +176,13 @@ class _TransactScreenState extends State<TransactScreen> {
           setState(() => _selectedRecipient = null);
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
           );
         }
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),
@@ -512,7 +548,7 @@ class _TransactScreenState extends State<TransactScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isRed ? Colors.red : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            color: isRed ? AppColors.error : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
           ),
         ),
       ],
@@ -567,7 +603,7 @@ class _TransactScreenState extends State<TransactScreen> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: '0.00',
-                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[700] : Colors.grey),
+                    hintStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.5)),
                   ),
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                 ),
@@ -599,6 +635,46 @@ class _TransactScreenState extends State<TransactScreen> {
         );
       },
     );
+  }
+
+  String _getTransactionTitle(VaultTransaction tx) {
+    String title = tx.description ?? 'Vault Transaction';
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    
+    if (tx.type == 'transfer') {
+      final otherProfile = tx.senderId == currentUserId ? tx.receiverProfile : tx.senderProfile;
+      if (otherProfile != null) {
+        final name = otherProfile.firstName ?? otherProfile.kycTag ?? 'User';
+        title = '$title ($name)';
+      }
+    }
+    return title;
+  }
+
+  Widget _buildTransactionIcon(VaultTransaction tx, bool isDebit, bool isDark) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isTransfer = tx.type == 'transfer';
+    
+    if (isTransfer) {
+      final otherProfile = tx.senderId == currentUserId ? tx.receiverProfile : tx.senderProfile;
+      if (otherProfile != null) {
+        final profilePhotoUrl = otherProfile.profilePhotoUrl;
+        final initials = ((otherProfile.firstName?.isNotEmpty ?? false) ? otherProfile.firstName![0] : '') + 
+                        ((otherProfile.lastName?.isNotEmpty ?? false) ? otherProfile.lastName![0] : '');
+        
+        return CircleAvatar(
+          radius: 20,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+          backgroundImage: profilePhotoUrl != null ? NetworkImage(profilePhotoUrl) : null,
+          child: profilePhotoUrl == null ? Text(
+            initials,
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 10),
+          ) : null,
+        );
+      }
+    }
+    
+    return LogoMapper.getLogo(tx.method, tx.description);
   }
 
   Widget _buildTransactionHistory(bool isDark, Color borderColor) {
@@ -635,13 +711,13 @@ class _TransactScreenState extends State<TransactScreen> {
                   
                   return Row(
                     children: [
-                      LogoMapper.getLogo(tx.method, tx.description),
+                      _buildTransactionIcon(tx, isDebit, isDark),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(tx.description ?? 'Vault Transaction', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(_getTransactionTitle(tx), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 4),
                             Text(
                               '${tx.createdAt.day}/${tx.createdAt.month} ${tx.createdAt.hour}:${tx.createdAt.minute.toString().padLeft(2, '0')}', 
@@ -654,12 +730,12 @@ class _TransactScreenState extends State<TransactScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${isDebit ? '-' : '+'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isDebit ? Colors.red : Colors.green,
-                            ),
+                          '${isDebit ? '-' : '+'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: isDebit ? AppColors.error : AppColors.success,
+                          ),
                           ),
                           if (tx.recordedBalance != null)
                             Text(CurrencyFormatter.format(tx.recordedBalance!, tx.currency), 

@@ -13,6 +13,8 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_even
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_state.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../models/vault_models.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -44,16 +46,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         listener: (context, state) {
           if (state is DashboardLoaded) {
-            // Module 1: Auth Guard Logic
             if (!state.user.hasPin) {
-              // Redirect to PIN setup if pin_hash is null
-              // context.go('/setup-pin'); 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Please set up your Transaction PIN to continue.')),
               );
             }
 
-            // Real-time Receipt Notification
             if (state.receipts.isNotEmpty) {
               final latestReceipt = state.receipts.first;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +63,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     label: 'View',
                     textColor: Colors.white,
                     onPressed: () {
-                      // Show receipt detail dialog
                       showDialog(
                         context: context,
                         builder: (context) => Dialog(
@@ -81,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
           if (state is DashboardError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
             );
           }
         },
@@ -105,19 +102,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _buildGreeting(context, state.user),
                         const SizedBox(height: 24),
 
-                        // Module 4: High-priority Warning Banner
-                        ...state.notifications
-                            .where((n) => n.type == 'warning')
-                            .map((n) => _buildWarningBanner(context, n)),
-
                         _buildAIInsightWidget(context, state.latestInsight)
                             .animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
-                        
-                        // Module 2: Portfolio Summary
+
                         _buildPortfolioSummaryCard(context, state)
                             .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+                        
+                        const SizedBox(height: 24),
+
+                        ...state.notifications
+                            .where((n) => n.type == 'warning')
+                            .map((n) => _buildWarningBanner(context, n)),
                         
                         const SizedBox(height: 24),
                         
@@ -126,19 +123,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         
                         const SizedBox(height: 24),
                         
-                        // Module 2: Growth Chart
                         _buildGrowthChart(context, state.growthData)
                             .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
                         
                         const SizedBox(height: 24),
                         
-                        // Module 5: Quick Send
                         _buildQuickSend(context, state.frequentContacts, state.suggestedUsers)
                             .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
-                        
+
                         const SizedBox(height: 24),
                         
-                        // Module 3: Transactions
                         _buildRecentTransactions(context, state.transactions)
                             .animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
                         
@@ -203,18 +197,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.alertTriangle, color: Colors.red, size: 18),
+          const Icon(LucideIcons.alertTriangle, color: AppColors.error, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               notification.message,
-              style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -223,41 +217,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAIInsightWidget(BuildContext context, String? insight) {
-    final theme = Theme.of(context);
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSizes.p20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.sparkles, color: theme.colorScheme.primary, size: 18),
-              const SizedBox(width: 12),
-              Text(
-                'AI INSIGHT',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            insight ?? 'Analyzing your financial patterns... Check back soon for pro-active tips!',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
+    return _AIInsightCard(initialInsight: insight);
   }
 
   Widget _buildPortfolioSummaryCard(BuildContext context, DashboardLoaded state) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Module 2: Dual Currency Display
     final primaryBalance = CurrencyFormatter.format(state.wallet.balance, state.wallet.currency);
     final secondaryCurrency = state.wallet.currency == 'USD' ? 'KES' : 'USD';
     final rate = state.currencyRates[secondaryCurrency] ?? 130.0;
@@ -561,7 +527,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(AppSizes.p16),
                 child: Row(
                   children: [
-                    _buildTransactionIcon(tx, isPositive),
+                    _buildTransactionIcon(context, tx, isPositive),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -579,7 +545,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           '${isPositive ? '+' : '-'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isPositive ? Colors.green : Colors.red,
+                            color: isPositive ? AppColors.success : AppColors.error,
                             fontSize: 14,
                           ),
                         ),
@@ -599,32 +565,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTransactionIcon(VaultTransaction tx, bool isPositive) {
+  Widget _buildTransactionIcon(BuildContext context, VaultTransaction tx, bool isPositive) {
     IconData icon;
     Color color;
     String? logoPath;
+    String? profilePhotoUrl;
+    String? initials;
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isTransfer = tx.type == 'transfer';
+
+    if (isTransfer) {
+      final otherProfile = tx.senderId == currentUserId ? tx.receiverProfile : tx.senderProfile;
+      if (otherProfile != null) {
+        profilePhotoUrl = otherProfile.profilePhotoUrl;
+        initials = ((otherProfile.firstName?.isNotEmpty ?? false) ? otherProfile.firstName![0] : '') + 
+                   ((otherProfile.lastName?.isNotEmpty ?? false) ? otherProfile.lastName![0] : '');
+      }
+    }
 
     final method = tx.method?.toLowerCase() ?? '';
     final description = tx.description?.toLowerCase() ?? '';
 
+    // Map method/description to logo assets
     if (method.contains('mpesa') || description.contains('mpesa')) {
-      logoPath = 'assets/logos/mpesa.png';
+      logoPath = 'assets/logos/mpesa.svg';
     } else if (method.contains('kcb') || description.contains('kcb')) {
-      logoPath = 'assets/logos/kcb.png';
+      logoPath = 'assets/logos/kcb.svg';
+    } else if (method.contains('absa') || description.contains('absa')) {
+      logoPath = 'assets/logos/absa.svg';
+    } else if (method.contains('equity') || description.contains('equity')) {
+      logoPath = 'assets/logos/equity.svg';
+    } else if (method.contains('co-op') || method.contains('coop') || description.contains('coop')) {
+      logoPath = 'assets/logos/coop.svg';
+    } else if (method.contains('chase') || description.contains('chase')) {
+      logoPath = 'assets/logos/chase.svg';
+    } else if (method.contains('stanbic') || description.contains('stanbic')) {
+      logoPath = 'assets/logos/stanbic.svg';
+    } else if (method.contains('standard chartered') || description.contains('standard chartered')) {
+      logoPath = 'assets/logos/standard-chartered.svg';
+    } else if (method.contains('ncba') || description.contains('ncba')) {
+      logoPath = 'assets/logos/ncba.svg';
+    } else if (method.contains('dtb') || description.contains('dtb')) {
+      logoPath = 'assets/logos/dtb.svg';
+    } else if (method.contains('family bank') || description.contains('family bank')) {
+      logoPath = 'assets/logos/family-bank.svg';
+    } else if (method.contains('im bank') || description.contains('im bank')) {
+      logoPath = 'assets/logos/im-bank.svg';
+    } else if (method.contains('airtel') || description.contains('airtel')) {
+      logoPath = 'assets/logos/airtel.svg';
+    } else if (method.contains('tkash') || description.contains('tkash')) {
+      logoPath = 'assets/logos/tkash.svg';
+    } else if (method.contains('bank of america') || description.contains('bank of america')) {
+      logoPath = 'assets/logos/bank-of-america.svg';
     } else if (method.contains('stripe') || description.contains('stripe')) {
-      logoPath = 'assets/logos/stripe.png';
+      logoPath = 'assets/logos/stripe.svg';
+    } else if (method.contains('bank') || description.contains('bank')) {
+      logoPath = 'assets/logos/bank.svg';
     }
 
     if (tx.type == 'deposit') {
       icon = LucideIcons.arrowDownLeft;
-      color = Colors.green;
+      color = AppColors.success;
     } else if (tx.type == 'withdrawal') {
       icon = LucideIcons.arrowUpRight;
-      color = Colors.red;
+      color = AppColors.error;
     } else {
+      final theme = Theme.of(context);
       icon = isPositive ? LucideIcons.arrowDownLeft : LucideIcons.arrowUpRight;
-      color = isPositive ? Colors.green : Colors.blue;
+      color = isPositive ? AppColors.success : theme.colorScheme.primary;
     }
+
+    if (isTransfer && (profilePhotoUrl != null || initials != null)) {
+      final theme = Theme.of(context);
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: color.withOpacity(0.1),
+        backgroundImage: profilePhotoUrl != null ? NetworkImage(profilePhotoUrl) : null,
+        child: profilePhotoUrl == null ? Text(
+          initials ?? '',
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+        ) : null,
+      );
+    }
+
+    final iconWidget = logoPath != null 
+        ? SvgPicture.asset(
+            logoPath, 
+            width: 18, 
+            height: 18, 
+            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 18),
+          )
+        : Icon(icon, color: color, size: 18);
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -632,14 +664,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: color.withOpacity(0.1),
         shape: BoxShape.circle,
       ),
-      child: logoPath != null 
-        ? Image.asset(
-            logoPath, 
-            width: 18, 
-            height: 18, 
-            errorBuilder: (c, e, s) => Icon(icon, color: color, size: 18),
-          )
-        : Icon(icon, color: color, size: 18),
+      child: color == AppColors.success 
+          ? iconWidget.animate(onPlay: (controller) => controller.repeat())
+              .rotate(duration: 4.seconds, curve: Curves.linear)
+          : iconWidget,
     );
   }
 
@@ -703,6 +731,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AIInsightCard extends StatefulWidget {
+  final String? initialInsight;
+  const _AIInsightCard({this.initialInsight});
+
+  @override
+  State<_AIInsightCard> createState() => _AIInsightCardState();
+}
+
+class _AIInsightCardState extends State<_AIInsightCard> with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+
+    setState(() => _isRefreshing = true);
+    _rotationController.repeat();
+    HapticFeedback.lightImpact();
+
+    try {
+      context.read<DashboardBloc>().add(RefreshAIInsight());
+      await Future.delayed(const Duration(milliseconds: 1200));
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+        _rotationController.stop();
+        _rotationController.reset();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        final insight = state is DashboardLoaded ? state.latestInsight : widget.initialInsight;
+
+        return GlassCard(
+          padding: const EdgeInsets.all(AppSizes.p20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.sparkles, color: theme.colorScheme.primary, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        'AI INSIGHT',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: _handleRefresh,
+                    child: RotationTransition(
+                      turns: _rotationController,
+                      child: Icon(
+                        LucideIcons.refreshCw,
+                        size: 16,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                insight ?? 'Analyzing your financial patterns... Check back soon for pro-active tips!',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

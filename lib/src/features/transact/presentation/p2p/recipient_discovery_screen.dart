@@ -52,6 +52,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Send Money', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.transparent,

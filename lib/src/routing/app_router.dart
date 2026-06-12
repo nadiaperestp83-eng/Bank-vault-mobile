@@ -13,6 +13,7 @@ import 'package:vault_os/src/features/finance/presentation/finance_hub_screen.da
 import 'package:vault_os/src/features/finance/presentation/savings_dashboard_screen.dart';
 import 'package:vault_os/src/features/finance/presentation/loans_dashboard_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vault_os/src/common_widgets/vault_top_nav.dart';
 import 'package:vault_os/src/features/auth/presentation/login_screen.dart';
 import 'package:vault_os/src/features/auth/presentation/signup_screen.dart';
@@ -61,6 +62,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     return Scaffold(
       appBar: const VaultTopNav(),
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           widget.child,
@@ -85,7 +87,9 @@ class _MainShellState extends ConsumerState<MainShell> {
           onPressed: () => _onTap(context, 2),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          child: const Icon(LucideIcons.repeat, color: Colors.white, size: 28),
+          child: const Icon(LucideIcons.repeat, color: Colors.white, size: 28)
+              .animate(onPlay: (controller) => controller.repeat())
+              .rotate(duration: 3.seconds, curve: Curves.linear),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

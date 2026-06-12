@@ -46,6 +46,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   bool _rememberNumber = false;
   bool _isUsd = true;
   String _searchQuery = '';
+  bool _isAwaitingMpesa = false;
 
   @override
   void initState() {
@@ -57,8 +58,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     try {
-      // Load system accounts and reference code regardless of initial method
-      // so it's ready if the user switches tabs.
       final results = await Future.wait([
         _txService.getSystemBankAccounts(),
         _txService.getCurrentUserProfile(),
@@ -87,82 +86,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     super.dispose();
   }
 
-  void _showBankSelectionSheet() {
-    final banks = _txService.getSupportedBanks();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 24),
-            const Text('Select Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                itemCount: banks.length,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final bank = banks[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      child: const Icon(LucideIcons.landmark, color: AppColors.primary, size: 20),
-                    ),
-                    title: Text(bank['name']!),
-                    onTap: () {
-                      setState(() => _selectedBankToLink = bank);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onLinkBank() async {
-    if (_selectedBankToLink == null || _accountNumberController.text.isEmpty) return;
-    
-    setState(() => _isLoadingAccounts = true);
-    try {
-      await _txService.linkBankAccount(
-        bankName: _selectedBankToLink!['name']!,
-        accountNumber: _accountNumberController.text,
-      );
-      _userAccounts = await _txService.getUserBankAccounts();
-      setState(() => _selectedBankToLink = null);
-      _accountNumberController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bank account linked successfully')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
-    } finally {
-      setState(() => _isLoadingAccounts = false);
-    }
-  }
-
   void _onDeposit() {
-    debugPrint('DEBUG: _onDeposit called. Method: $_selectedMethod, Bank: $_selectedBankName');
     HapticFeedback.lightImpact();
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
     
-    final amountStr = _amountController.text;
-    final amount = double.tryParse(amountStr) ?? 0.0;
-    
-    debugPrint('DEBUG: Amount string: "$amountStr", parsed: $amount');
-
     if (amount <= 0) {
-      debugPrint('DEBUG: Amount is <= 0. Showing SnackBar.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount greater than 0'), backgroundColor: Colors.orange),
       );
@@ -170,17 +98,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     }
 
     if (_selectedMethod == 'bank' && _selectedBankName == null) {
-      debugPrint('DEBUG: Method is bank but no bank selected. Showing SnackBar.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a bank from the list to proceed'), backgroundColor: Colors.orange),
       );
       return;
     }
-
-    debugPrint('DEBUG: Proceeding to show PIN sheet.');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening secure PIN entry...'), duration: Duration(milliseconds: 500)),
-    );
 
     showModalBottomSheet(
       context: context,
@@ -188,17 +110,13 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => PinEntrySheet(
         onConfirm: (pin) {
-          debugPrint('DEBUG: PIN entered and confirmed in UI. Proceeding to BLoC.');
-          Navigator.pop(context); // Close PIN sheet
+          Navigator.pop(context);
           
-          final amountStr = _amountController.text;
-          final amount = double.tryParse(amountStr) ?? 0.0;
           final walletCredit = _isUsd ? amount : amount / 130.0;
           final kesEquivalent = _isUsd ? amount * 130.0 : amount;
 
           if (_selectedMethod == 'mpesa') {
             final phoneNumber = _isAddingNew ? _phoneController.text : (_currentUser?.phoneNumber ?? _phoneController.text);
-            debugPrint('DEBUG: Starting M-Pesa deposit for $phoneNumber');
             context.read<TransactionBloc>().add(PerformMpesaDeposit(
               phoneNumber: phoneNumber,
               walletCredit: walletCredit,
@@ -206,14 +124,12 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
               pin: pin,
             ));
           } else if (_selectedMethod == 'card') {
-            debugPrint('DEBUG: Starting Stripe Card deposit for \$${walletCredit.toStringAsFixed(2)}');
             context.read<TransactionBloc>().add(PerformStripeDeposit(
               amount: walletCredit,
               currency: 'USD',
               pin: pin,
             ));
           } else if (_selectedMethod == 'bank') {
-            debugPrint('DEBUG: Starting Stripe Bank deposit for \$${walletCredit.toStringAsFixed(2)}');
             context.read<TransactionBloc>().add(PerformStripeDeposit(
               amount: walletCredit,
               currency: 'USD',
@@ -237,23 +153,11 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       children: [
         BlocListener<TransactionBloc, TransactionState>(
           listener: (context, state) async {
-            debugPrint('DEBUG: BlocListener received state: $state');
             if (state is TransactionSuccess) {
-              debugPrint('DEBUG: TransactionSuccess received. Message: ${state.message}');
               setState(() => _isProcessing = false);
               
               if (state.message.contains('Stripe')) {
-                debugPrint('DEBUG: Stripe flow detected. Transaction ID (Secret): ${state.transactionId}');
-                if (Stripe.publishableKey.isEmpty) {
-                   debugPrint('DEBUG: CRITICAL ERROR: Stripe.publishableKey is EMPTY!');
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Configuration Error: Stripe Key missing'), backgroundColor: Colors.red),
-                   );
-                   setState(() => _isProcessing = false);
-                   return;
-                }
                 try {
-                  debugPrint('DEBUG: Initializing Stripe Payment Sheet...');
                   await Stripe.instance.initPaymentSheet(
                     paymentSheetParameters: SetupPaymentSheetParameters(
                       paymentIntentClientSecret: state.transactionId!,
@@ -263,11 +167,8 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                       style: Theme.of(context).brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
                     ),
                   );
-                  debugPrint('DEBUG: Stripe Payment Sheet Initialized. Presenting...');
                   await Stripe.instance.presentPaymentSheet();
-                  debugPrint('DEBUG: Stripe Payment Sheet Presented successfully.');
                   
-                  // Show processing message instead of success, as we wait for the webhook
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Payment authorized! Processing your deposit...'),
@@ -277,20 +178,16 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                   );
                   setState(() => _isProcessing = true);
                 } catch (e) {
-                  debugPrint('DEBUG: Stripe Error caught: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Payment Failed or Cancelled: $e'), backgroundColor: Colors.red),
                   );
                 }
               } else if (state.message.contains('STK Push sent')) {
-                 debugPrint('DEBUG: M-Pesa flow detected. Awaiting PIN...');
                  setState(() => _isAwaitingMpesa = true);
               } else {
-                debugPrint('DEBUG: Regular TransactionSuccess. Showing overlay.');
                 _showSuccessOverlay(state.message);
               }
             } else if (state is TransactionError) {
-              debugPrint('DEBUG: TransactionError received: ${state.message}');
               setState(() {
                 _isProcessing = false;
                 _isAwaitingMpesa = false;
@@ -299,7 +196,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                 SnackBar(content: Text(state.message), backgroundColor: Colors.red),
               );
             } else if (state is TransactionInProgress) {
-              debugPrint('DEBUG: TransactionInProgress received. Message: ${state.message}');
               setState(() {
                 _isProcessing = true;
                 _processingMessage = state.message;
@@ -341,8 +237,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
       ],
     );
   }
-
-  bool _isAwaitingMpesa = false;
 
   Widget _buildProcessingOverlay() {
     return Container(
@@ -685,7 +579,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
             final isSelected = _selectedBankName == bank['name'];
             return InkWell(
               onTap: () {
-                debugPrint('DEBUG: Bank selected: ${bank['name']}');
                 setState(() => _selectedBankName = bank['name']);
               },
               child: GlassCard(
@@ -837,11 +730,9 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   Widget _buildActionButton() {
     return BlocBuilder<TransactionBloc, TransactionState>(
       builder: (context, state) {
-        debugPrint('DEBUG: _buildActionButton current state: $state');
         final isLoading = state is TransactionInProgress || state is TransactionLoading;
         return ElevatedButton(
           onPressed: isLoading ? null : () {
-            debugPrint('DEBUG: ElevatedButton onPressed triggered');
             _onDeposit();
           },
           style: ElevatedButton.styleFrom(
