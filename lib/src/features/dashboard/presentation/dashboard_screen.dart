@@ -660,14 +660,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final iconWidget = logoPath != null 
         ? SvgPicture.asset(
             logoPath, 
-            width: 18, 
-            height: 18, 
-            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 18),
+            width: 24, 
+            height: 24, 
+            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 24),
           )
-        : Icon(icon, color: color, size: 18);
+        : Icon(icon, color: color, size: 24);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         shape: BoxShape.circle,
