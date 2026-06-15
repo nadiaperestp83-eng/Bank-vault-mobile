@@ -30,30 +30,52 @@ class AiAdvisorBloc extends Bloc<AiAdvisorEvent, AiAdvisorState> {
   }
 
   void _onChatUpdated(ChatUpdated event, Emitter<AiAdvisorState> emit) {
-    emit(AiAdvisorLoaded(messages: event.messages));
+    bool wasTyping = false;
+    if (state is AiAdvisorLoaded) {
+      wasTyping = (state as AiAdvisorLoaded).isTyping;
+    }
+
+    // Stop typing indicator if the last message is from the advisor
+    bool stillTyping = wasTyping;
+    if (event.messages.isNotEmpty && event.messages.last.sender == 'advisor') {
+      stillTyping = false;
+    }
+
+    emit(AiAdvisorLoaded(
+      messages: event.messages,
+      isTyping: stillTyping,
+    ));
   }
 
   Future<void> _onSendMessageRequested(SendMessageRequested event, Emitter<AiAdvisorState> emit) async {
     if (state is AiAdvisorLoaded) {
       final currentState = state as AiAdvisorLoaded;
-      emit(AiAdvisorLoaded(
-        messages: currentState.messages,
-        isTyping: true,
-      ));
+      emit(currentState.copyWith(isTyping: true));
     }
 
     try {
       await _aiAdvisorService.sendMessage(event.text);
-      // Real-time stream will update the messages
+      
+      // Manual refresh as a fallback for mobile stream issues
+      final messages = await _aiAdvisorService.getChatHistory();
+      add(ChatUpdated(messages));
     } catch (e) {
       if (state is AiAdvisorLoaded) {
         final currentState = state as AiAdvisorLoaded;
-        emit(AiAdvisorLoaded(
-          messages: currentState.messages,
+        emit(currentState.copyWith(
           isTyping: false,
           error: e.toString(),
         ));
       }
+    } finally {
+      // Safety fallback: if after 10 seconds we are still typing, reset it
+      // This handles cases where the stream might be slow or fail on mobile
+      Future.delayed(const Duration(seconds: 10), () {
+        if (isClosed) return;
+        if (state is AiAdvisorLoaded && (state as AiAdvisorLoaded).isTyping) {
+          add(ChatUpdated((state as AiAdvisorLoaded).messages)); // This will trigger _onChatUpdated and reset isTyping
+        }
+      });
     }
   }
 

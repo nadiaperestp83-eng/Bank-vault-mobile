@@ -206,11 +206,11 @@ final router = GoRouter(
           path: '/help',
           builder: (context, state) => const HelpScreen(),
         ),
-        GoRoute(
-          path: '/ai-advisor',
-          builder: (context, state) => const AiAdvisorScreen(),
-        ),
       ],
+    ),
+    GoRoute(
+      path: '/ai-advisor',
+      builder: (context, state) => const AiAdvisorScreen(),
     ),
   ],
 );
