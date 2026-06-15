@@ -139,18 +139,20 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
       children: [
         Text(
           'Savings Management',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 28,
+          style: GoogleFonts.outfit(
+            fontSize: 30,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
+            letterSpacing: -0.5,
           ),
         ).animate().fadeIn().slideX(begin: -0.1, end: 0),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Track your progress and grow your capital.',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            height: 1.4,
           ),
         ).animate().fadeIn(delay: 100.ms),
       ],
@@ -232,17 +234,18 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
     if (goals.length < 2) displayGoals.add('Add New');
 
     return SizedBox(
-      height: 42,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: displayGoals.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           bool isActive = _activeGoalIndex == index;
           bool isAdd = index == goals.length && goals.length < 2;
           
           return GestureDetector(
             onTap: () {
+              HapticFeedback.selectionClick();
               if (isAdd) {
                 _showCreateGoalDialog();
               } else {
@@ -253,23 +256,30 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
               duration: 200.ms,
               padding: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
-                borderRadius: BorderRadius.circular(12),
+                color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                  color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.lightBorder),
                 ),
+                boxShadow: isActive ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ] : null,
               ),
               alignment: Alignment.center,
               child: Row(
                 children: [
-                  if (isAdd) Icon(LucideIcons.plus, size: 14, color: isDark ? Colors.white70 : Colors.black45),
-                  if (isAdd) const SizedBox(width: 6),
+                  if (isAdd) Icon(LucideIcons.plus, size: 14, color: isActive ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                  if (isAdd) const SizedBox(width: 8),
                   Text(
                     displayGoals[index],
                     style: TextStyle(
-                      color: isActive ? Colors.white : (isDark ? Colors.white70 : Colors.black54),
+                      color: isActive ? Colors.white : (isDark ? Colors.white70 : AppColors.lightHeading),
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -286,16 +296,17 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder.withValues(alpha: 0.5)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.lightBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -307,53 +318,53 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ACCUMULATED', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                  const SizedBox(height: 6),
+                  Text('ACCUMULATED', style: theme.textTheme.labelSmall),
+                  const SizedBox(height: 12),
                   Text(
                     'KES ${NumberFormat('#,###').format(goal.currentAmount)}',
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -0.5),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     'Target: KES ${NumberFormat('#,###').format(goal.targetAmount)}',
-                    style: TextStyle(color: AppColors.primary.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
               _buildProgressCircle(goal),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 40),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('PROGRESS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: Colors.grey)),
-                  Text('${(goal.progress * 100).toInt()}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  const Text('PROGRESS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Colors.grey)),
+                  Text('${(goal.progress * 100).toInt()}%', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
                   value: goal.progress,
-                  minHeight: 10,
+                  minHeight: 12,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 40),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text('GROWTH TRAJECTORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.4))),
+            child: Text('GROWTH TRAJECTORY', style: theme.textTheme.labelSmall),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           SizedBox(
-            height: 100,
+            height: 120,
             child: LineChart(
               LineChartData(
                 gridData: const FlGridData(show: false),
@@ -364,13 +375,13 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
                     spots: _getSpotsFromLedger(ledger),
                     isCurved: true,
                     color: AppColors.primary,
-                    barWidth: 3,
+                    barWidth: 4,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: [AppColors.primary.withValues(alpha: 0.2), AppColors.primary.withValues(alpha: 0)],
+                        colors: [AppColors.primary.withValues(alpha: 0.25), AppColors.primary.withValues(alpha: 0)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -380,22 +391,22 @@ class _SavingsDashboardScreenState extends State<SavingsDashboardScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 40),
           ElevatedButton(
             onPressed: () => _showContributionDialog(goal),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 64),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 8,
-              shadowColor: AppColors.primary.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              elevation: 12,
+              shadowColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(LucideIcons.plusCircle, size: 20),
-                SizedBox(width: 10),
+                SizedBox(width: 12),
                 Text('Add Contribution', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),

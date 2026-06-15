@@ -278,12 +278,12 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildVaultLogo(),
-        const SizedBox(height: AppSizes.p20),
+        const SizedBox(height: AppSizes.p24),
         Text(
-          'Log In to Your Vault Account',
+          'Log In to Your Vault',
           textAlign: TextAlign.center,
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 26,
+          style: GoogleFonts.outfit(
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
@@ -291,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: AppSizes.p12),
         Text(
-          'Enter your registered email and 6-digit PIN to access your vault.',
+          'Enter your registered email and 6-digit PIN to access your account.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -330,7 +330,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
                   ),
                   child: Icon(
                     LucideIcons.fingerprint,
@@ -354,12 +354,12 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildVaultLogo(),
-        const SizedBox(height: AppSizes.p20),
+        const SizedBox(height: AppSizes.p24),
         Text(
           'Identity Verification',
           textAlign: TextAlign.center,
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 26,
+          style: GoogleFonts.outfit(
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -70,18 +72,19 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               children: [
                 Text(
                   'Vault AI Advisor',
-                  style: TextStyle(
+                  style: GoogleFonts.outfit(
                     color: theme.colorScheme.onSurface,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
                   ),
                 ),
                 Text(
                   'Always active',
                   style: TextStyle(
                     color: AppColors.success,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -92,6 +95,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           IconButton(
             icon: const Icon(LucideIcons.trash2, size: 20, color: Colors.grey),
             onPressed: () {
+              HapticFeedback.selectionClick();
               context.read<AiAdvisorBloc>().add(ClearChatRequested());
             },
           ),
@@ -150,38 +154,47 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.sparkles, size: 64, color: AppColors.primary.withValues(alpha: 0.2)),
-          const SizedBox(height: 24),
-          const Text(
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.sparkles, size: 48, color: AppColors.primary),
+          ),
+          const SizedBox(height: 32),
+          Text(
             'How can I help you today?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
           ),
           const SizedBox(height: 12),
           const Text(
             'Ask me about your balance, savings goals,\nor financial tips.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: Colors.grey, height: 1.5),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 40),
           _buildSuggestionChips(['What is my balance?', 'Show my savings', 'Give me a tip']),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.1, end: 0);
   }
 
   Widget _buildSuggestionChips(List<String> suggestions) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 12,
+      runSpacing: 12,
       alignment: WrapAlignment.center,
       children: suggestions.map((s) => ActionChip(
-        label: Text(s, style: const TextStyle(fontSize: 12)),
+        label: Text(s, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         onPressed: () {
+          HapticFeedback.selectionClick();
           context.read<AiAdvisorBloc>().add(SendMessageRequested(s));
         },
         backgroundColor: AppColors.primary.withValues(alpha: 0.05),
         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       )).toList(),
     );
   }
@@ -189,6 +202,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   Widget _buildChatBubble(AiChatMessage message) {
     final isUser = message.sender == 'user';
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -197,41 +211,49 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         children: [
           Container(
             margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
             decoration: BoxDecoration(
-              color: isUser ? AppColors.primary : (theme.brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1)),
+              color: isUser ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white),
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(isUser ? 20 : 0),
-                bottomRight: Radius.circular(isUser ? 0 : 20),
+                topLeft: const Radius.circular(24),
+                topRight: const Radius.circular(24),
+                bottomLeft: Radius.circular(isUser ? 24 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 24),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: !isUser ? Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.lightBorder) : null,
             ),
             child: _buildRichText(message.text, isUser),
           ),
           // Extract suggestions from AI text if present
           if (!isUser && message.text.contains('[') && message.text.contains(']'))
             Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 24, left: 4),
               child: _buildSuggestionChips(_extractSuggestions(message.text)),
             ),
         ],
-      ).animate().fadeIn(duration: 300.ms).slideX(begin: isUser ? 0.1 : -0.1, end: 0),
+      ).animate().fadeIn(duration: 300.ms).slideX(begin: isUser ? 0.05 : -0.05, end: 0),
     );
   }
 
   Widget _buildRichText(String text, bool isUser) {
     // Custom parser for markdown-like syntax
-    // This is a simplified version. For full markdown, use flutter_markdown
     final String cleanText = text.replaceAll(RegExp(r'\[.*?\]'), '').trim();
     
     return Text(
       cleanText,
       style: TextStyle(
         color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
-        fontSize: 14,
+        fontSize: 15,
         height: 1.5,
+        fontWeight: isUser ? FontWeight.w500 : FontWeight.normal,
       ),
     );
   }
