@@ -17,7 +17,6 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     on<SearchRecipients>(_onSearchRecipients);
     on<PerformVaultTransfer>(_onPerformVaultTransfer);
     on<PerformMpesaDeposit>(_onPerformMpesaDeposit);
-    on<PerformStripeDeposit>(_onPerformStripeDeposit);
     on<PerformWithdrawal>(_onPerformWithdrawal);
     on<TransactionStatusUpdated>(_onTransactionStatusUpdated);
     on<TransactionTimeoutOccurred>(_onTransactionTimeoutOccurred);
@@ -157,35 +156,6 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
   void _onTransactionTimeoutOccurred(
       TransactionTimeoutOccurred event, Emitter<TransactionState> emit) {
     emit(TransactionTimeout('Transaction Pending - We\'ll notify you once it\'s completed.'));
-  }
-
-  Future<void> _onPerformStripeDeposit(
-      PerformStripeDeposit event, Emitter<TransactionState> emit) async {
-    emit(TransactionInProgress('Verifying PIN...'));
-    try {
-      final isPinValid = await transactionService.verifyPin(event.pin);
-      if (!isPinValid) {
-        emit(TransactionError('Invalid Transaction PIN'));
-        return;
-      }
-
-      emit(TransactionInProgress('Initializing Stripe payment...'));
-      final intentData = await transactionService.createStripePaymentIntent(
-        amount: event.amount,
-        currency: event.currency,
-        paymentMethodTypes: event.paymentMethodTypes,
-      ).timeout(const Duration(seconds: 30));
-      
-      final intentId = intentData['id'] as String?;
-      if (intentId != null) {
-        _currentTransactionId = intentId;
-        _startTimeoutTimer();
-      }
-      
-      emit(TransactionSuccess('Stripe Payment Intent created', transactionId: intentData['clientSecret']));
-    } catch (e) {
-      emit(TransactionError(e.toString()));
-    }
   }
 
   Future<void> _onPerformWithdrawal(

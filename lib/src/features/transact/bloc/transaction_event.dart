@@ -51,23 +51,6 @@ class PerformMpesaDeposit extends TransactionEvent {
   List<Object?> get props => [phoneNumber, walletCredit, kesEquivalent, pin];
 }
 
-class PerformStripeDeposit extends TransactionEvent {
-  final double amount;
-  final String currency;
-  final String pin;
-  final List<String>? paymentMethodTypes;
-
-  PerformStripeDeposit({
-    required this.amount,
-    required this.currency,
-    required this.pin,
-    this.paymentMethodTypes,
-  });
-
-  @override
-  List<Object?> get props => [amount, currency, pin, paymentMethodTypes];
-}
-
 class PerformWithdrawal extends TransactionEvent {
   final double amount;
   final String method;

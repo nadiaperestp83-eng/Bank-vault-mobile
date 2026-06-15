@@ -256,37 +256,6 @@ class TransactionService {
     return checkoutId;
   }
 
-  Future<Map<String, dynamic>> createStripePaymentIntent({
-    required double amount,
-    required String currency,
-    List<String>? paymentMethodTypes,
-  }) async {
-    await _checkKyc();
-    debugPrint('DEBUG: Service calling stripe-create-intent for \$${amount.toStringAsFixed(2)} $currency');
-    final response = await _supabase.functions.invoke('stripe-create-intent', body: {
-      'amount': amount,
-      'currency': currency,
-      'payment_method_types': paymentMethodTypes,
-    });
-    
-    debugPrint('DEBUG: stripe-create-intent response status: ${response.status}');
-    debugPrint('DEBUG: stripe-create-intent response data: ${response.data}');
-
-    final intentData = response.data as Map<String, dynamic>;
-    final intentId = intentData['id'] as String?;
-    
-    if (intentId != null) {
-      await createPendingTransaction(
-        type: 'deposit',
-        amount: amount,
-        description: intentId,
-        method: 'card',
-      );
-    }
-    
-    return intentData;
-  }
-
   Future<void> initiateWithdrawal({
     required double amount,
     required String method,

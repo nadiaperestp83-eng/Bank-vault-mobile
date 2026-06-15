@@ -11,7 +11,6 @@ import 'package:vault_os/src/features/transact/bloc/transaction_event.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' hide BankAccount;
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/services/transaction_service.dart';
 import 'package:vault_os/src/models/vault_models.dart';
@@ -123,19 +122,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
               kesEquivalent: kesEquivalent,
               pin: pin,
             ));
-          } else if (_selectedMethod == 'card') {
-            context.read<TransactionBloc>().add(PerformStripeDeposit(
-              amount: walletCredit,
-              currency: 'USD',
-              pin: pin,
-            ));
-          } else if (_selectedMethod == 'bank') {
-            context.read<TransactionBloc>().add(PerformStripeDeposit(
-              amount: walletCredit,
-              currency: 'USD',
-              pin: pin,
-              paymentMethodTypes: const ['us_bank_account'],
-            ));
           }
         },
       ),
@@ -156,33 +142,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
             if (state is TransactionSuccess) {
               setState(() => _isProcessing = false);
               
-              if (state.message.contains('Stripe')) {
-                try {
-                  await Stripe.instance.initPaymentSheet(
-                    paymentSheetParameters: SetupPaymentSheetParameters(
-                      paymentIntentClientSecret: state.transactionId!,
-                      merchantDisplayName: 'Vault OS',
-                      applePay: const PaymentSheetApplePay(merchantCountryCode: 'US'),
-                      googlePay: const PaymentSheetGooglePay(merchantCountryCode: 'US'),
-                      style: Theme.of(context).brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
-                    ),
-                  );
-                  await Stripe.instance.presentPaymentSheet();
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Payment authorized! Processing your deposit...'),
-                      backgroundColor: Colors.blue,
-                      duration: Duration(seconds: 5),
-                    ),
-                  );
-                  setState(() => _isProcessing = true);
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Payment Failed or Cancelled: $e'), backgroundColor: Colors.red),
-                  );
-                }
-              } else if (state.message.contains('STK Push sent')) {
+              if (state.message.contains('STK Push sent')) {
                  setState(() => _isAwaitingMpesa = true);
               } else {
                 _showSuccessOverlay(state.message);
@@ -224,7 +184,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                   const SizedBox(height: 32),
                   if (_selectedMethod == 'mpesa') _buildMpesaField(isDark),
                   if (_selectedMethod == 'bank') _buildBankFlow(isDark, secondaryTextColor, primaryTextColor),
-                  if (_selectedMethod == 'card') _buildCardInfo(secondaryTextColor),
                   const SizedBox(height: 48),
                   _buildActionButton(),
                 ],
@@ -333,7 +292,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     final methods = [
       {'id': 'mpesa', 'label': 'Mobile', 'icon': LucideIcons.phone},
       {'id': 'bank', 'label': 'Bank', 'icon': LucideIcons.landmark},
-      {'id': 'card', 'label': 'Card', 'icon': LucideIcons.creditCard},
     ];
 
     return Container(
@@ -640,25 +598,6 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCardInfo(Color secondaryTextColor) {
-    return GlassCard(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Icon(LucideIcons.creditCard, size: 48, color: secondaryTextColor.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          const Text('Stripe Secure Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          Text(
-            'Your card details are encrypted and never stored on our servers.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: secondaryTextColor, fontSize: 13),
-          ),
-        ],
       ),
     );
   }

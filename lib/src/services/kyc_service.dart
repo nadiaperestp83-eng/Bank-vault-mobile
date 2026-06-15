@@ -30,13 +30,18 @@ class KycService {
   }
 
   // 3. Update KYC status
-  Future<void> updateKycStatus(String status) async {
+  Future<void> updateKycStatus(String status, {String? idNumber}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
+    final Map<String, dynamic> updates = {'kyc_status': status};
+    if (idNumber != null) {
+      updates['id_number'] = idNumber;
+    }
+
     await _supabase
         .from('profiles')
-        .update({'kyc_status': status})
+        .update(updates)
         .eq('id', userId);
   }
 

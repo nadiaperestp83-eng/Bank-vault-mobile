@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:social_share_plus/social_share_plus.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
@@ -45,7 +45,7 @@ class _BusinessProfileSectionState extends ConsumerState<BusinessProfileSection>
     }
   }
 
-  Future<void> _downloadQR() async {
+  Future<void> _shareQR() async {
     try {
       RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
@@ -56,11 +56,11 @@ class _BusinessProfileSectionState extends ConsumerState<BusinessProfileSection>
       final imagePath = await File('${directory.path}/business_qr.png').create();
       await imagePath.writeAsBytes(pngBytes);
 
-      await Share.shareXFiles([XFile(imagePath.path)], text: 'My Business QR Code');
+      await SocialSharePlus.shareToSocialMedia('My Business QR Code', path: imagePath.path);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving QR: $e')),
+          SnackBar(content: Text('Error sharing QR: $e')),
         );
       }
     }
@@ -259,9 +259,9 @@ class _BusinessProfileSectionState extends ConsumerState<BusinessProfileSection>
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _downloadQR,
-                  icon: const Icon(LucideIcons.download, size: 18),
-                  label: const Text('Download QR'),
+                  onPressed: _shareQR,
+                  icon: const Icon(LucideIcons.share2, size: 18),
+                  label: const Text('Share QR'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: AppSizes.p12),
                     shape: RoundedRectangleBorder(

@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
@@ -148,29 +147,9 @@ class _TransactScreenState extends State<TransactScreen> {
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) async {
         if (state is TransactionSuccess) {
-          if (state.message.contains('Stripe')) {
-            // Handle Stripe Payment Sheet
-            try {
-              await Stripe.instance.initPaymentSheet(
-                paymentSheetParameters: SetupPaymentSheetParameters(
-                  paymentIntentClientSecret: state.transactionId!,
-                  merchantDisplayName: 'Vault OS',
-                ),
-              );
-              await Stripe.instance.presentPaymentSheet();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Payment Successful!'), backgroundColor: AppColors.success),
-              );
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Payment Cancelled/Failed: $e'), backgroundColor: AppColors.error),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
-            );
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
+          );
           _amountController.clear();
           _phoneController.clear();
           _recipientController.clear();

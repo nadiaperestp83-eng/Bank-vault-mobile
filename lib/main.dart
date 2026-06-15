@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:vault_os/src/services/supabase_service.dart';
 import 'package:vault_os/src/routing/app_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,10 +28,6 @@ void main() async {
 
   // Initialize Supabase
   await SupabaseService.initialize();
-
-  // Initialize Stripe
-  Stripe.publishableKey = dotenv.env['STRIPE_KEY']!;
-  await Stripe.instance.applySettings();
 
   final authService = AuthService();
   final dashboardService = DashboardService();
