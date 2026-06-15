@@ -302,38 +302,60 @@ class TransactionService {
 
   Future<List<VaultUser>> getFrequentRecipients() async {
     final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) return _getMockRecipients();
+    if (userId == null) return [];
 
     try {
+      // 1. Fetch recent transactions to calculate frequency and recency
       final response = await _supabase
-          .from('ledger_entries')
-          .select('metadata, description')
-          .eq('user_id', userId)
-          .eq('type', 'transfer')
+          .from('transactions')
+          .select('receiver_id, created_at')
+          .eq('sender_id', userId)
           .eq('status', 'completed')
           .order('created_at', ascending: false)
-          .limit(50);
+          .limit(100);
 
-      final List<VaultUser> users = [];
-      final Set<String> seenIds = {};
+      if (response == null || (response as List).isEmpty) return [];
 
-      for (var item in (response as List)) {
-        final recipientId = item['metadata']?['recipient_id'] as String?;
-        if (recipientId != null && !seenIds.contains(recipientId)) {
-          // Fetch profile for this recipient
-          final profileResponse = await _supabase.from('profiles').select().eq('id', recipientId).single();
-          if (profileResponse != null) {
-            users.add(VaultUser.fromJson(profileResponse));
-            seenIds.add(recipientId);
-          }
-        }
-        if (users.length >= 5) break;
-      }
+      // 2. Calculate scores based on frequency and recency
+      final Map<String, double> scores = {};
+      final now = DateTime.now();
       
-      if (users.isEmpty) return _getMockRecipients();
-      return users;
+      for (var item in (response as List)) {
+        final recipientId = item['receiver_id'] as String?;
+        if (recipientId == null) continue;
+
+        final createdAt = DateTime.parse(item['created_at']);
+        final daysAgo = now.difference(createdAt).inDays;
+        
+        // Scoring formula: 1 point for frequency + recency weight
+        final recencyWeight = 1.0 / (daysAgo + 1);
+        scores[recipientId] = (scores[recipientId] ?? 0) + 1.0 + recencyWeight;
+      }
+
+      if (scores.isEmpty) return [];
+
+      // 3. Sort by score and take top IDs
+      final sortedIds = scores.keys.toList()
+        ..sort((a, b) => scores[b]!.compareTo(scores[a]!));
+      
+      final topIds = sortedIds.take(10).toList();
+
+      // 4. Fetch profiles for these top IDs
+      final profilesResponse = await _supabase
+          .from('profiles')
+          .select()
+          .inFilter('id', topIds);
+
+      if (profilesResponse == null) return [];
+      
+      final profiles = (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+      
+      // Maintain score order
+      profiles.sort((a, b) => scores[b.id]!.compareTo(scores[a.id]!));
+      
+      return profiles;
     } catch (e) {
-      return _getMockRecipients();
+      return [];
     }
   }
 

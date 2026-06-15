@@ -344,32 +344,46 @@ class DashboardService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
+    // 1. Fetch from 'transactions' table to count frequency
     final response = await _supabase
-        .from('ledger_entries')
-        .select('metadata')
-        .eq('user_id', userId)
-        .eq('type', 'transfer')
-        .order('created_at', ascending: false)
-        .limit(20);
+        .from('transactions')
+        .select('receiver_id')
+        .eq('sender_id', userId)
+        .eq('status', 'completed');
 
-    if (response == null) return [];
+    if (response == null || (response as List).isEmpty) return [];
 
-    final receiverIds = (response as List)
-        .where((t) => t['metadata']?['recipient_id'] != null)
-        .map((t) => t['metadata']?['recipient_id'] as String)
-        .toSet()
-        .take(4)
-        .toList();
+    // 2. Count frequencies of receiver_id
+    final Map<String, int> frequencies = {};
+    for (var entry in (response as List)) {
+      final recipientId = entry['receiver_id'] as String?;
+      if (recipientId != null) {
+        frequencies[recipientId] = (frequencies[recipientId] ?? 0) + 1;
+      }
+    }
 
-    if (receiverIds.isEmpty) return [];
+    if (frequencies.isEmpty) return [];
 
+    // 3. Sort by frequency and take top IDs
+    final sortedIds = frequencies.keys.toList()
+      ..sort((a, b) => frequencies[b]!.compareTo(frequencies[a]!));
+    
+    final topIds = sortedIds.take(10).toList();
+
+    // 4. Fetch profiles for these top IDs
     final profilesResponse = await _supabase
         .from('profiles')
         .select()
-        .inFilter('id', receiverIds);
+        .inFilter('id', topIds);
 
     if (profilesResponse == null) return [];
-    return (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+    
+    final profiles = (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+    
+    // Maintain frequency order
+    profiles.sort((a, b) => frequencies[b.id]!.compareTo(frequencies[a.id]!));
+    
+    return profiles;
   }
 
   Future<List<VaultUser>> getSuggestedUsers() async {
