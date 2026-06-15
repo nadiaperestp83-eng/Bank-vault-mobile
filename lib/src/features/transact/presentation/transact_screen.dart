@@ -191,9 +191,23 @@ class _TransactScreenState extends State<TransactScreen> {
 
   Widget _buildModeToggle(bool isDark, Color surfaceColor) {
     return Center(
-      child: GlassCard(
+      child: Container(
         padding: const EdgeInsets.all(6),
-        borderRadius: 20,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.lightBorder,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -209,12 +223,16 @@ class _TransactScreenState extends State<TransactScreen> {
   Widget _toggleItem(int index, String label, bool isDark) {
     bool isActive = _activeTab == index;
     return GestureDetector(
-      onTap: () => setState(() => _activeTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _activeTab = index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
           color: isActive ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Text(
           label,

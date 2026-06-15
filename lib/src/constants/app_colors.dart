@@ -12,12 +12,12 @@ class AppColors {
   static const Color darkWarning = Color(0xFFF59E0B);
 
   // --- Light Mode (The Pristine Ledger) ---
-  static const Color lightBackground = Color(0xFFF8FAFC);
-  static const Color lightSurface = Color(0xB3FFFFFF); // rgba(255, 255, 255, 0.7)
+  static const Color lightBackground = Color(0xFFF9FAFB); // Cleaner, less blue
+  static const Color lightSurface = Colors.white; 
   static const Color lightPrimary = Color(0xFF059669); // Forest Green
-  static const Color lightHeading = Color(0xFF0F172A);
-  static const Color lightBody = Color(0xFF64748B);
-  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightHeading = Color(0xFF111827); // Deeper, more modern gray
+  static const Color lightBody = Color(0xFF4B5563); // Better contrast for readability
+  static const Color lightBorder = Color(0xFFF3F4F6); // Subtler border
   static const Color lightError = Color(0xFFDC2626);
   static const Color lightWarning = Color(0xFFD97706);
 

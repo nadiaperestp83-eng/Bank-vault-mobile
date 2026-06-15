@@ -84,10 +84,11 @@ class FinanceHubScreen extends StatelessWidget {
       children: [
         Text(
           'Finance Hub',
-          style: GoogleFonts.dmSerifDisplay(
+          style: GoogleFonts.outfit(
             fontSize: 34,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
+            letterSpacing: -0.5,
           ),
         ).animate().fadeIn().slideX(begin: -0.1, end: 0),
         const SizedBox(height: 8),
@@ -131,8 +132,23 @@ class FinanceHubScreen extends StatelessWidget {
 
   Widget _buildStatItem(BuildContext context, String label, String value, IconData icon, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GlassCard(
+    return Container(
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.lightBorder,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,7 +163,7 @@ class FinanceHubScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 2),
           Text(
@@ -155,7 +171,8 @@ class FinanceHubScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 11, 
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -182,12 +199,13 @@ class FinanceHubScreen extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder.withValues(alpha: 0.5)),
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.lightBorder),
           boxShadow: [
             BoxShadow(
-              color: gradient[0].withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: gradient[0].withValues(alpha: isDark ? 0.1 : 0.15),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+              spreadRadius: -4,
             ),
           ],
         ),
@@ -198,7 +216,7 @@ class FinanceHubScreen extends StatelessWidget {
               // Background
               Positioned.fill(
                 child: Container(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  color: isDark ? AppColors.darkSurface : Colors.white,
                 ),
               ),
               
@@ -213,7 +231,7 @@ class FinanceHubScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        gradient[0].withValues(alpha: 0.15),
+                        gradient[0].withValues(alpha: 0.1),
                         gradient[0].withValues(alpha: 0),
                       ],
                     ),
@@ -261,15 +279,15 @@ class FinanceHubScreen extends StatelessWidget {
                       style: TextStyle(
                         color: gradient[0],
                         fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 24,
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
                       ),
@@ -279,7 +297,7 @@ class FinanceHubScreen extends StatelessWidget {
                       description,
                       style: TextStyle(
                         fontSize: 14,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         height: 1.5,
                       ),
                     ),
@@ -293,11 +311,11 @@ class FinanceHubScreen extends StatelessWidget {
     ).animate().fadeIn(delay: delay).slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
   }
 
-  Widget _buildAuroraGlows() {
+  Widget _buildAuroraGlows(bool isDark) {
     return Stack(
       children: [
         Positioned(
-          top: -100,
+          top: -150,
           left: -100,
           child: Container(
             width: 400,
@@ -306,8 +324,8 @@ class FinanceHubScreen extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.darkPrimary.withValues(alpha: 0.08),
-                  AppColors.darkPrimary.withValues(alpha: 0),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0.08) : AppColors.lightPrimary.withValues(alpha: 0.05),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0) : AppColors.lightPrimary.withValues(alpha: 0),
                 ],
               ),
             ),
@@ -323,7 +341,7 @@ class FinanceHubScreen extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFF6366F1).withValues(alpha: 0.05),
+                  const Color(0xFF6366F1).withValues(alpha: isDark ? 0.05 : 0.03),
                   const Color(0xFF6366F1).withValues(alpha: 0),
                 ],
               ),

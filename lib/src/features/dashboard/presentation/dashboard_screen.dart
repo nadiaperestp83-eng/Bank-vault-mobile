@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -151,11 +152,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAuroraGlows() {
+  Widget _buildAuroraGlows(bool isDark) {
     return Stack(
       children: [
         Positioned(
-          top: -100,
+          top: -150,
           left: -100,
           child: Container(
             width: 400,
@@ -164,16 +165,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.darkPrimary.withOpacity(0.08),
-                  AppColors.darkPrimary.withOpacity(0),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0.08) : AppColors.lightPrimary.withValues(alpha: 0.05),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0) : AppColors.lightPrimary.withValues(alpha: 0),
                 ],
               ),
             ),
           ),
         ),
         Positioned(
-          bottom: -150,
-          right: -100,
+          top: 100,
+          right: -150,
           child: Container(
             width: 500,
             height: 500,
@@ -181,8 +182,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.darkPrimary.withOpacity(0.05),
-                  AppColors.darkPrimary.withOpacity(0),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0.05) : const Color(0xFF6366F1).withValues(alpha: 0.03),
+                  isDark ? AppColors.darkPrimary.withValues(alpha: 0) : const Color(0xFF6366F1).withValues(alpha: 0),
                 ],
               ),
             ),
@@ -241,8 +242,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(isDark ? 0.7 : 0.8),
+            isDark ? theme.colorScheme.primary : const Color(0xFF10B981),
+            isDark ? theme.colorScheme.primary.withValues(alpha: 0.7) : const Color(0xFF059669),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -250,9 +251,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: (isDark ? theme.colorScheme.primary : const Color(0xFF10B981)).withValues(alpha: isDark ? 0.2 : 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -262,34 +264,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             'TOTAL PORTFOLIO BALANCE',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
+              letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             primaryBalance,
-            style: const TextStyle(
+            style: GoogleFonts.outfit(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: 36,
               fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+              letterSpacing: -1,
             ),
           ),
           Text(
             '≈ $secondaryBalance',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -299,16 +302,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: Colors.white, 
                       size: 14,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Text(
                       '${growth.toStringAsFixed(2)}%',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
               const Spacer(),
-              const Icon(LucideIcons.chevronRight, color: Colors.white70),
+              Icon(LucideIcons.chevronRight, color: Colors.white.withValues(alpha: 0.5), size: 20),
             ],
           ),
         ],
@@ -660,14 +663,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final iconWidget = logoPath != null 
         ? SvgPicture.asset(
             logoPath, 
-            width: 18, 
-            height: 18, 
-            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 18),
+            width: 24, 
+            height: 24, 
+            placeholderBuilder: (BuildContext context) => Icon(icon, color: color, size: 24),
           )
-        : Icon(icon, color: color, size: 18);
+        : Icon(icon, color: color, size: 24);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         shape: BoxShape.circle,
