@@ -135,6 +135,44 @@ class Wallet extends Equatable {
   List<Object?> get props => [id, userId, balance, currency, updatedAt];
 }
 
+class BankAccount extends Equatable {
+  final String id;
+  final String userId;
+  final String bankName;
+  final String accountNumber;
+  final String? accountHolderName;
+  final String? routingNumber;
+  final String? logoUrl;
+  final String? stripeBankAccountId;
+
+  BankAccount({
+    required this.id,
+    required this.userId,
+    required this.bankName,
+    required this.accountNumber,
+    this.accountHolderName,
+    this.routingNumber,
+    this.logoUrl,
+    this.stripeBankAccountId,
+  });
+
+  factory BankAccount.fromJson(Map<String, dynamic> json) {
+    return BankAccount(
+      id: json['id'],
+      userId: json['user_id'],
+      bankName: json['bank_name'],
+      accountNumber: json['account_number'],
+      accountHolderName: json['account_holder_name'],
+      routingNumber: json['routing_number'],
+      logoUrl: json['logo_url'],
+      stripeBankAccountId: json['stripe_bank_account_id'],
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, userId, bankName, accountNumber, accountHolderName, routingNumber, logoUrl, stripeBankAccountId];
+}
+
 class VaultTransaction extends Equatable {
   final String id;
   final String? senderId;

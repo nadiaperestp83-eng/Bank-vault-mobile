@@ -38,9 +38,24 @@ class TransactionSuccess extends TransactionState {
   List<Object?> get props => [message, transactionId];
 }
 
+class TransactionAwaitingConfirmation extends TransactionState {
+  final String message;
+  final String? transactionId;
+  TransactionAwaitingConfirmation(this.message, {this.transactionId});
+  @override
+  List<Object?> get props => [message, transactionId];
+}
+
 class TransactionError extends TransactionState {
   final String message;
   TransactionError(this.message);
+  @override
+  List<Object?> get props => [message];
+}
+
+class TransactionTimeout extends TransactionState {
+  final String message;
+  TransactionTimeout(this.message);
   @override
   List<Object?> get props => [message];
 }

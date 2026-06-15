@@ -117,9 +117,12 @@ class _TransactScreenState extends State<TransactScreen> {
         ));
       } else if (_activeTab == 1) {
         // Deposit logic: M-Pesa is default for now in the tab
+        final walletCredit = _selectedCurrency == 'USD' ? amount : amount / 130.0;
+        final kesEquivalent = _selectedCurrency == 'KES' ? amount : amount * 130.0;
         context.read<TransactionBloc>().add(PerformMpesaDeposit(
           phoneNumber: _phoneController.text,
-          amount: amount,
+          walletCredit: walletCredit,
+          kesEquivalent: kesEquivalent,
           pin: pin,
         ));
       } else if (_activeTab == 2) {
@@ -280,9 +283,21 @@ class _TransactScreenState extends State<TransactScreen> {
                   child: _buildProviderCard(LucideIcons.user, 'Vault User', true, isDark, surfaceColor, borderColor),
                 ),
                 const SizedBox(width: 12),
-                _buildProviderCard(LucideIcons.landmark, 'Bank', false, isDark, surfaceColor, borderColor),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    context.go('/transact/withdraw');
+                  },
+                  child: _buildProviderCard(LucideIcons.landmark, 'Bank', false, isDark, surfaceColor, borderColor),
+                ),
                 const SizedBox(width: 12),
-                _buildProviderCard(LucideIcons.smartphone, 'Mobile Money', false, isDark, surfaceColor, borderColor),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    context.go('/transact/withdraw');
+                  },
+                  child: _buildProviderCard(LucideIcons.smartphone, 'Mobile Money', false, isDark, surfaceColor, borderColor),
+                ),
               ],
             ),
             const SizedBox(height: 32),

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vault_models.dart';
 import 'transaction_cache.dart';
@@ -66,30 +68,223 @@ class TransactionService {
     });
   }
 
+  Future<VaultUser?> getCurrentUserProfile() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return null;
+
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .single();
+    
+    return VaultUser.fromJson(response);
+  }
+
+  Future<List<BankAccount>> getUserBankAccounts() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await _supabase
+        .from('user_bank_accounts')
+        .select()
+        .eq('user_id', userId);
+    
+    return (response as List).map((json) => BankAccount.fromJson(json)).toList();
+  }
+
+  Future<Map<String, dynamic>> createStripeAchIntent({
+    required double amount,
+    required String currency,
+  }) async {
+    final response = await _supabase.functions.invoke('stripe-create-intent', body: {
+      'amount': amount,
+      'currency': currency,
+      'payment_method_types': ['us_bank_account'],
+    });
+    
+    final intentData = response.data as Map<String, dynamic>;
+    final intentId = intentData['id'] as String?;
+    
+    if (intentId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: amount,
+        description: intentId,
+        method: 'bank',
+      );
+    }
+    
+    return intentData;
+  }
+
+  String generateReferenceCode() {
+    final userId = _supabase.auth.currentUser?.id ?? 'USER';
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    return 'VLT-${userId.substring(0, 4).toUpperCase()}-$timestamp';
+  }
+
+  Future<String> uploadTransferReceipt(String filePath) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final fileName = 'receipts/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await _supabase.storage.from('receipts').upload(fileName, File(filePath));
+    return _supabase.storage.from('receipts').getPublicUrl(fileName);
+  }
+
+  Future<void> reportManualTransfer({
+    required double amount,
+    required String reference,
+    required String receiptUrl,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('transactions').insert({
+      'sender_id': userId,
+      'receiver_id': userId,
+      'amount': amount,
+      'type': 'deposit',
+      'status': 'pending',
+      'description': 'Manual Bank Transfer: $reference',
+      'method': 'bank',
+      'metadata': {
+        'receipt_url': receiptUrl,
+        'reference_code': reference,
+      },
+    });
+  }
+
+  Future<void> linkBankAccount({
+    required String bankName,
+    required String accountNumber,
+    String? accountHolderName,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('user_bank_accounts').insert({
+      'user_id': userId,
+      'bank_name': bankName,
+      'account_number': accountNumber,
+      'account_holder_name': accountHolderName,
+    });
+  }
+
+  List<Map<String, String>> getSupportedBanks() {
+    return [
+      {'name': 'Equity Bank', 'logo': 'equity.svg'},
+      {'name': 'KCB Bank', 'logo': 'kcb.svg'},
+      {'name': 'Co-operative Bank', 'logo': 'coop.svg'},
+      {'name': 'NCBA Bank', 'logo': 'ncba.svg'},
+      {'name': 'Absa Bank', 'logo': 'absa.svg'},
+      {'name': 'Stanbic Bank', 'logo': 'stanbic.svg'},
+      {'name': 'Standard Chartered', 'logo': 'standard-chartered.svg'},
+      {'name': 'DTB Bank', 'logo': 'dtb.svg'},
+      {'name': 'Family Bank', 'logo': 'family-bank.svg'},
+      {'name': 'I&M Bank', 'logo': 'im-bank.svg'},
+    ];
+  }
+
+  Future<void> updateProfilePhoneNumber(String phoneNumber) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await _supabase.from('profiles').update({
+      'phone_number': phoneNumber,
+    }).eq('id', userId);
+  }
+
+  String formatPhoneNumber(String phone) {
+    String cleaned = phone.replaceAll(RegExp(r'\D'), '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '254${cleaned.substring(1)}';
+    } else if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+      cleaned = '254$cleaned';
+    } else if (cleaned.startsWith('+')) {
+      cleaned = cleaned.substring(1);
+    }
+    return cleaned;
+  }
+
+  Future<void> createPendingTransaction({
+    required String type,
+    required double amount,
+    required String description,
+    String? method,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _supabase.from('transactions').insert({
+      'sender_id': userId,
+      'receiver_id': userId,
+      'amount': amount,
+      'type': type,
+      'status': 'pending',
+      'description': description,
+      'method': method,
+    });
+  }
+
   Future<String?> initiateMpesaDeposit({
     required String phoneNumber,
-    required double amount,
+    required double walletCredit,
+    required double kesEquivalent,
   }) async {
     await _checkKyc();
+    final formattedPhone = formatPhoneNumber(phoneNumber);
+    debugPrint('DEBUG: Service calling mpesa-deposit for $formattedPhone, amount: $kesEquivalent');
     final response = await _supabase.functions.invoke('mpesa-deposit', body: {
-      'phoneNumber': phoneNumber,
-      'amount': amount,
+      'phoneNumber': formattedPhone,
+      'amount': kesEquivalent,
     });
-    return response.data?['CheckoutRequestID'] as String?;
+    
+    debugPrint('DEBUG: mpesa-deposit response status: ${response.status}');
+    debugPrint('DEBUG: mpesa-deposit response data: ${response.data}');
+
+    final checkoutId = response.data?['CheckoutRequestID'] as String?;
+    if (checkoutId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: walletCredit,
+        description: checkoutId,
+        method: 'mpesa',
+      );
+    }
+    return checkoutId;
   }
 
   Future<Map<String, dynamic>> createStripePaymentIntent({
     required double amount,
     required String currency,
+    List<String>? paymentMethodTypes,
   }) async {
-    // KYC check might not be needed for simple payment intent creation, 
-    // but check it if required by business logic. 
-    // Assuming for now it's only needed for outgoing transfers/withdrawals.
+    await _checkKyc();
+    debugPrint('DEBUG: Service calling stripe-create-intent for \$${amount.toStringAsFixed(2)} $currency');
     final response = await _supabase.functions.invoke('stripe-create-intent', body: {
       'amount': amount,
       'currency': currency,
+      'payment_method_types': paymentMethodTypes,
     });
-    return response.data as Map<String, dynamic>;
+    
+    debugPrint('DEBUG: stripe-create-intent response status: ${response.status}');
+    debugPrint('DEBUG: stripe-create-intent response data: ${response.data}');
+
+    final intentData = response.data as Map<String, dynamic>;
+    final intentId = intentData['id'] as String?;
+    
+    if (intentId != null) {
+      await createPendingTransaction(
+        type: 'deposit',
+        amount: amount,
+        description: intentId,
+        method: 'card',
+      );
+    }
+    
+    return intentData;
   }
 
   Future<void> initiateWithdrawal({
@@ -188,7 +383,42 @@ class TransactionService {
     if (amount > balance) {
       throw Exception('Insufficient balance');
     }
-    // Added 1% fee check for withdrawals in logic if needed, but for now basic limit
+
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    // 1. Velocity Check: Max 3 transactions in 5 minutes
+    final fiveMinutesAgo = DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String();
+    final recentTxs = await _supabase
+        .from('transactions')
+        .select('id')
+        .eq('sender_id', userId)
+        .gt('created_at', fiveMinutesAgo);
+    
+    if ((recentTxs as List).length >= 3) {
+      throw Exception('Velocity limit exceeded. Please wait a few minutes.');
+    }
+
+    // 2. Spike Check: Max 400% of last 10 transactions average
+    final lastTenTxs = await _supabase
+        .from('transactions')
+        .select('amount')
+        .eq('sender_id', userId)
+        .order('created_at', ascending: false)
+        .limit(10);
+    
+    final txList = lastTenTxs as List;
+    if (txList.isNotEmpty) {
+      double sum = 0;
+      for (var tx in txList) {
+        sum += (tx['amount'] as num).toDouble();
+      }
+      double average = sum / txList.length;
+      if (amount > average * 4) {
+        throw Exception('Transaction spike detected. Please contact support for large withdrawals.');
+      }
+    }
+
     if (amount > 100000) {
       throw Exception('Amount exceeds daily limit for unverified users');
     }

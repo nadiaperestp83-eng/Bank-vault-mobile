@@ -11,6 +11,7 @@ class WithdrawalResultScreen extends StatelessWidget {
   final String message;
   final Map<String, dynamic> details;
   final double amount;
+  final String? transactionId;
 
   const WithdrawalResultScreen({
     super.key,
@@ -18,6 +19,7 @@ class WithdrawalResultScreen extends StatelessWidget {
     required this.message,
     required this.details,
     required this.amount,
+    this.transactionId,
   });
 
   @override
@@ -25,6 +27,7 @@ class WithdrawalResultScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -39,7 +42,7 @@ class WithdrawalResultScreen extends StatelessWidget {
               const SizedBox(height: 32),
               Text(
                 isSuccess ? 'Withdrawal Successful' : 'Withdrawal Failed',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: primaryTextColor),
               ),
               const SizedBox(height: 12),
               Text(
@@ -49,7 +52,7 @@ class WithdrawalResultScreen extends StatelessWidget {
               ),
               if (isSuccess) ...[
                 const SizedBox(height: 48),
-                _buildTransactionSummary(secondaryTextColor, isDark),
+                _buildTransactionSummary(secondaryTextColor, isDark, primaryTextColor),
               ],
               const Spacer(),
               _buildDoneButton(context),
@@ -77,51 +80,61 @@ class WithdrawalResultScreen extends StatelessWidget {
     ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack).shake(delay: 500.ms);
   }
 
-  Widget _buildTransactionSummary(Color secondaryTextColor, bool isDark) {
+  Widget _buildTransactionSummary(Color secondaryTextColor, bool isDark, Color primaryTextColor) {
     final provider = details['provider'];
     final account = details['accountNumber'] ?? details['phoneNumber'];
-    final reference = 'WTH-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final reference = transactionId ?? 'WTH-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.backgroundLight,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
-          _summaryRow('Reference', reference, secondaryTextColor),
+          _summaryRow('Reference', reference, secondaryTextColor, primaryTextColor),
           const SizedBox(height: 12),
-          _summaryRow('Destination', provider.toString().toUpperCase(), secondaryTextColor),
+          _summaryRow('Destination', provider.toString().toUpperCase(), secondaryTextColor, primaryTextColor),
           const SizedBox(height: 12),
-          _summaryRow('Account/Phone', account.toString(), secondaryTextColor),
+          _summaryRow('Account/Phone', account.toString(), secondaryTextColor, primaryTextColor),
           const Divider(height: 32),
-          _summaryRow('Amount', CurrencyFormatter.format(amount, 'USD'), secondaryTextColor, isBold: true),
+          _summaryRow('Amount', CurrencyFormatter.format(amount, 'USD'), secondaryTextColor, primaryTextColor, isBold: true),
         ],
       ),
     ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1, end: 0);
   }
 
-  Widget _summaryRow(String label, String value, Color secondaryTextColor, {bool isBold = false}) {
+  Widget _summaryRow(String label, String value, Color secondaryTextColor, Color primaryTextColor, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: secondaryTextColor, fontSize: 13)),
-        Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, fontSize: isBold ? 16 : 14)),
+        Text(
+          value,
+          style: TextStyle(
+            color: primaryTextColor,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            fontSize: isBold ? 16 : 14,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildDoneButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => context.go('/'),
+      onPressed: () => context.go('/dashboard'),
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 64),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 10,
+        shadowColor: AppColors.primary.withValues(alpha: 0.4),
       ),
-      child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      child: const Text('Back to Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
     );
   }
 }

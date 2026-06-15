@@ -20,15 +20,37 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     on<PerformStripeDeposit>(_onPerformStripeDeposit);
     on<PerformWithdrawal>(_onPerformWithdrawal);
     on<TransactionStatusUpdated>(_onTransactionStatusUpdated);
+    on<TransactionTimeoutOccurred>(_onTransactionTimeoutOccurred);
 
     _initRealtimeSubscription();
   }
 
+  String? _currentTransactionId;
+  Timer? _timeoutTimer;
+
   void _initRealtimeSubscription() {
     _transactionSubscription = transactionService.getTransactionsStream().listen((transactions) {
-      if (transactions.isNotEmpty) {
-        final latestTx = transactions.first;
-        add(TransactionStatusUpdated(latestTx));
+      if (_currentTransactionId != null) {
+        try {
+          final tx = transactions.firstWhere((t) => t.description == _currentTransactionId || t.id == _currentTransactionId);
+          if (tx.status != 'pending') {
+            _timeoutTimer?.cancel();
+            add(TransactionStatusUpdated(tx));
+            _currentTransactionId = null;
+          }
+        } catch (e) {
+          // Current transaction not found in the stream yet or not updated
+        }
+      }
+    });
+  }
+
+  void _startTimeoutTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(const Duration(seconds: 60), () {
+      if (_currentTransactionId != null) {
+        add(TransactionTimeoutOccurred());
+        _currentTransactionId = null;
       }
     });
   }
@@ -36,6 +58,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
   @override
   Future<void> close() {
     _transactionSubscription?.cancel();
+    _timeoutTimer?.cancel();
     return super.close();
   }
 
@@ -105,8 +128,14 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       emit(TransactionInProgress('Requesting M-Pesa STK Push...'));
       final checkoutId = await transactionService.initiateMpesaDeposit(
         phoneNumber: event.phoneNumber,
-        amount: event.amount,
-      );
+        walletCredit: event.walletCredit,
+        kesEquivalent: event.kesEquivalent,
+      ).timeout(const Duration(seconds: 30));
+      
+      if (checkoutId != null) {
+        _currentTransactionId = checkoutId;
+        _startTimeoutTimer();
+      }
       
       emit(TransactionSuccess('STK Push sent! Please enter your M-Pesa PIN on your phone.', transactionId: checkoutId));
     } on KycRequiredException {
@@ -125,6 +154,11 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     }
   }
 
+  void _onTransactionTimeoutOccurred(
+      TransactionTimeoutOccurred event, Emitter<TransactionState> emit) {
+    emit(TransactionTimeout('Transaction Pending - We\'ll notify you once it\'s completed.'));
+  }
+
   Future<void> _onPerformStripeDeposit(
       PerformStripeDeposit event, Emitter<TransactionState> emit) async {
     emit(TransactionInProgress('Verifying PIN...'));
@@ -139,7 +173,14 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       final intentData = await transactionService.createStripePaymentIntent(
         amount: event.amount,
         currency: event.currency,
-      );
+        paymentMethodTypes: event.paymentMethodTypes,
+      ).timeout(const Duration(seconds: 30));
+      
+      final intentId = intentData['id'] as String?;
+      if (intentId != null) {
+        _currentTransactionId = intentId;
+        _startTimeoutTimer();
+      }
       
       emit(TransactionSuccess('Stripe Payment Intent created', transactionId: intentData['clientSecret']));
     } catch (e) {
