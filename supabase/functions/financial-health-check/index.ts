@@ -26,10 +26,10 @@ serve(async (req) => {
 
     // 1. Fetch recent transactions for analysis
     const { data: transactions } = await supabase
-      .from('transactions')
+      .from('ledger_entries')
       .select('amount, type, created_at')
-      .eq('sender_id', user.id)
-      .order('created_at', ascending: false)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .limit(50)
 
     // 2. Simple analysis logic

@@ -341,7 +341,7 @@ class _TransactScreenState extends State<TransactScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: recipients.length + 1,
                 itemBuilder: (context, index) {
-                  if (index == 0) return _buildContactAvatar('Add', null, isDark, isAdd: true);
+                  if (index == 0) return _buildContactAvatar('Add', null, null, isDark, isAdd: true);
                   final user = recipients[index - 1];
                   final isSelected = _selectedRecipient?.id == user.id;
                   return GestureDetector(
@@ -349,6 +349,7 @@ class _TransactScreenState extends State<TransactScreen> {
                     child: _buildContactAvatar(
                       user.firstName ?? user.kycTag ?? 'User',
                       (user.firstName?[0] ?? '') + (user.lastName?[0] ?? ''),
+                      user.profilePhotoUrl,
                       isDark,
                       isSelected: isSelected,
                     ),
@@ -390,7 +391,7 @@ class _TransactScreenState extends State<TransactScreen> {
     );
   }
 
-  Widget _buildContactAvatar(String name, String? initials, bool isDark, {bool isAdd = false, bool isSelected = false}) {
+  Widget _buildContactAvatar(String name, String? initials, String? profilePhotoUrl, bool isDark, {bool isAdd = false, bool isSelected = false}) {
     return Container(
       margin: const EdgeInsets.only(right: 20),
       child: Column(
@@ -407,9 +408,14 @@ class _TransactScreenState extends State<TransactScreen> {
             child: CircleAvatar(
               radius: 28,
               backgroundColor: isAdd ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1)),
+              backgroundImage: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+                  ? NetworkImage(profilePhotoUrl)
+                  : null,
               child: isAdd 
                   ? const Icon(LucideIcons.plus, color: AppColors.primary)
-                  : Text(initials ?? '??', style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
+                  : (profilePhotoUrl == null || profilePhotoUrl.isEmpty)
+                      ? Text(initials ?? '??', style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold))
+                      : null,
             ),
           ),
           const SizedBox(height: 8),

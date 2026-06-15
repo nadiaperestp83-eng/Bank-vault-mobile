@@ -429,6 +429,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildQuickSend(BuildContext context, List<VaultUser> frequent, List<VaultUser> suggested) {
     final theme = Theme.of(context);
     
+    // User requested only to display users with most transactions
+    if (frequent.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -447,10 +450,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ...frequent.map((user) => Padding(
                 padding: const EdgeInsets.only(right: 20),
                 child: _buildContactAvatar(context, user, isFrequent: true),
-              )),
-              ...suggested.map((user) => Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: _buildContactAvatar(context, user),
               )),
             ],
           ),
@@ -486,14 +485,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     return Column(
       children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: isFrequent ? theme.colorScheme.primary.withOpacity(0.2) : theme.colorScheme.primary.withOpacity(0.1),
-          backgroundImage: user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) : null,
-          child: user.profilePhotoUrl == null ? Text(
-            initials,
-            style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-          ) : null,
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: isFrequent ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
+          ),
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: isFrequent ? theme.colorScheme.primary.withValues(alpha: 0.2) : theme.colorScheme.primary.withValues(alpha: 0.1),
+            backgroundImage: (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty) 
+                ? NetworkImage(user.profilePhotoUrl!) 
+                : null,
+            child: (user.profilePhotoUrl == null || user.profilePhotoUrl!.isEmpty) ? Text(
+              initials,
+              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+            ) : null,
+          ),
         ),
         const SizedBox(height: 8),
         Text(user.firstName ?? 'User', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),

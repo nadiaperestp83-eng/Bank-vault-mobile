@@ -173,6 +173,69 @@ class BankAccount extends Equatable {
   List<Object?> get props => [id, userId, bankName, accountNumber, accountHolderName, routingNumber, logoUrl, stripeBankAccountId];
 }
 
+class LedgerEntry extends Equatable {
+  final String id;
+  final String userId;
+  final double amount;
+  final String currency;
+  final String type;
+  final String status;
+  final String? reference;
+  final String? description;
+  final Map<String, dynamic> metadata;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  LedgerEntry({
+    required this.id,
+    required this.userId,
+    required this.amount,
+    required this.currency,
+    required this.type,
+    required this.status,
+    this.reference,
+    this.description,
+    this.metadata = const {},
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory LedgerEntry.fromJson(Map<String, dynamic> json) {
+    return LedgerEntry(
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] ?? 'USD',
+      type: json['type'] ?? '',
+      status: json['status'] ?? 'completed',
+      reference: json['reference'],
+      description: json['description'],
+      metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata']) : {},
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'amount': amount,
+      'currency': currency,
+      'type': type,
+      'status': status,
+      'reference': reference,
+      'description': description,
+      'metadata': metadata,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [id, userId, amount, currency, type, status, reference, description, metadata, createdAt, updatedAt];
+}
+
 class VaultTransaction extends Equatable {
   final String id;
   final String? senderId;
@@ -205,28 +268,115 @@ class VaultTransaction extends Equatable {
   });
 
   factory VaultTransaction.fromJson(Map<String, dynamic> json) {
+    final metadata = json['metadata'] as Map<String, dynamic>? ?? {};
+    final type = json['type'] as String? ?? 'transfer';
+    final userId = json['user_id'] as String?;
+    final rawAmount = (json['amount'] as num?)?.toDouble() ?? 0.0;
+    
+    // For ledger entries, we infer sender/receiver
+    String? senderId;
+    String? receiverId;
+    
+    if (type == 'transfer') {
+      if (rawAmount < 0) {
+        // I am the sender
+        senderId = userId;
+        receiverId = metadata['recipient_id'] as String?;
+      } else {
+        // I am the receiver
+        senderId = metadata['sender_id'] as String?;
+        receiverId = userId;
+      }
+    } else {
+      senderId = userId;
+      receiverId = userId;
+    }
+
     return VaultTransaction(
       id: json['id'] ?? '',
-      senderId: json['sender_id'] as String?,
-      receiverId: json['receiver_id'] as String?,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      senderId: senderId,
+      receiverId: receiverId,
+      amount: rawAmount.abs(),
       currency: json['currency'] ?? 'USD',
-      type: json['type'] ?? 'transfer',
-      method: json['method'] as String?,
+      type: type,
+      method: json['method'] as String? ?? metadata['method'] as String?,
       status: json['status'] ?? 'pending',
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
       description: json['description'] as String?,
-      recordedBalance: json['recorded_balance'] != null 
-          ? (json['recorded_balance'] as num?)?.toDouble() 
-          : null,
+      recordedBalance: (metadata['recorded_balance'] as num?)?.toDouble(),
       senderProfile: json['sender_profile'] != null 
           ? VaultUser.fromJson(json['sender_profile']) 
           : null,
       receiverProfile: json['receiver_profile'] != null 
           ? VaultUser.fromJson(json['receiver_profile']) 
           : null,
+    );
+  }
+
+  VaultTransaction copyWith({
+    String? id,
+    String? senderId,
+    String? receiverId,
+    double? amount,
+    String? currency,
+    String? type,
+    String? method,
+    String? status,
+    DateTime? createdAt,
+    String? description,
+    double? recordedBalance,
+    VaultUser? senderProfile,
+    VaultUser? receiverProfile,
+  }) {
+    return VaultTransaction(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      amount: amount ?? this.amount,
+      currency: currency ?? this.currency,
+      type: type ?? this.type,
+      method: method ?? this.method,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      description: description ?? this.description,
+      recordedBalance: recordedBalance ?? this.recordedBalance,
+      senderProfile: senderProfile ?? this.senderProfile,
+      receiverProfile: receiverProfile ?? this.receiverProfile,
+    );
+  }
+
+  factory VaultTransaction.fromLedger(LedgerEntry ledger) {
+    final rawAmount = ledger.amount;
+    String? senderId;
+    String? receiverId;
+
+    if (ledger.type == 'transfer') {
+      if (rawAmount < 0) {
+        senderId = ledger.userId;
+        receiverId = ledger.metadata['recipient_id'] as String?;
+      } else {
+        senderId = ledger.metadata['sender_id'] as String?;
+        receiverId = ledger.userId;
+      }
+    } else {
+      senderId = ledger.userId;
+      receiverId = ledger.userId;
+    }
+
+    return VaultTransaction(
+      id: ledger.reference ?? ledger.id,
+      senderId: senderId,
+      receiverId: receiverId,
+      amount: rawAmount.abs(),
+      currency: ledger.currency,
+      type: ledger.type,
+      method: ledger.metadata['method'] as String?,
+      status: ledger.status,
+      createdAt: ledger.createdAt,
+      description: ledger.description,
+      recordedBalance: (ledger.metadata['recorded_balance'] as num?)?.toDouble(),
     );
   }
 

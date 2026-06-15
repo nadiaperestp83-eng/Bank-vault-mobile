@@ -141,17 +141,16 @@ class TransactionService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _supabase.from('transactions').insert({
-      'sender_id': userId,
-      'receiver_id': userId,
+    await _supabase.from('ledger_entries').insert({
+      'user_id': userId,
       'amount': amount,
       'type': 'deposit',
       'status': 'pending',
+      'reference': reference,
       'description': 'Manual Bank Transfer: $reference',
-      'method': 'bank',
       'metadata': {
+        'method': 'bank',
         'receipt_url': receiptUrl,
-        'reference_code': reference,
       },
     });
   }
@@ -217,14 +216,15 @@ class TransactionService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _supabase.from('transactions').insert({
-      'sender_id': userId,
-      'receiver_id': userId,
+    await _supabase.from('ledger_entries').insert({
+      'user_id': userId,
       'amount': amount,
       'type': type,
       'status': 'pending',
       'description': description,
-      'method': method,
+      'metadata': {
+        'method': method,
+      },
     });
   }
 
@@ -319,36 +319,60 @@ class TransactionService {
 
   Future<List<VaultUser>> getFrequentRecipients() async {
     final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) return _getMockRecipients();
+    if (userId == null) return [];
 
     try {
+      // 1. Fetch recent transactions to calculate frequency and recency
       final response = await _supabase
           .from('transactions')
-          .select('receiver_id, profiles!transactions_receiver_id_fkey(*)')
+          .select('receiver_id, created_at')
           .eq('sender_id', userId)
           .eq('status', 'completed')
           .order('created_at', ascending: false)
-          .limit(20);
+          .limit(100);
 
-      final List<VaultUser> users = [];
-      final Set<String> seenIds = {};
+      if (response == null || (response as List).isEmpty) return [];
 
-      for (var item in (response as List)) {
-        final profile = item['profiles'];
-        if (profile != null) {
-          final user = VaultUser.fromJson(profile);
-          if (!seenIds.contains(user.id)) {
-            users.add(user);
-            seenIds.add(user.id);
-          }
-        }
-        if (users.length >= 5) break;
-      }
+      // 2. Calculate scores based on frequency and recency
+      final Map<String, double> scores = {};
+      final now = DateTime.now();
       
-      if (users.isEmpty) return _getMockRecipients();
-      return users;
+      for (var item in (response as List)) {
+        final recipientId = item['receiver_id'] as String?;
+        if (recipientId == null) continue;
+
+        final createdAt = DateTime.parse(item['created_at']);
+        final daysAgo = now.difference(createdAt).inDays;
+        
+        // Scoring formula: 1 point for frequency + recency weight
+        final recencyWeight = 1.0 / (daysAgo + 1);
+        scores[recipientId] = (scores[recipientId] ?? 0) + 1.0 + recencyWeight;
+      }
+
+      if (scores.isEmpty) return [];
+
+      // 3. Sort by score and take top IDs
+      final sortedIds = scores.keys.toList()
+        ..sort((a, b) => scores[b]!.compareTo(scores[a]!));
+      
+      final topIds = sortedIds.take(10).toList();
+
+      // 4. Fetch profiles for these top IDs
+      final profilesResponse = await _supabase
+          .from('profiles')
+          .select()
+          .inFilter('id', topIds);
+
+      if (profilesResponse == null) return [];
+      
+      final profiles = (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+      
+      // Maintain score order
+      profiles.sort((a, b) => scores[b.id]!.compareTo(scores[a.id]!));
+      
+      return profiles;
     } catch (e) {
-      return _getMockRecipients();
+      return [];
     }
   }
 
@@ -390,9 +414,9 @@ class TransactionService {
     // 1. Velocity Check: Max 3 transactions in 5 minutes
     final fiveMinutesAgo = DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String();
     final recentTxs = await _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .select('id')
-        .eq('sender_id', userId)
+        .eq('user_id', userId)
         .gt('created_at', fiveMinutesAgo);
     
     if ((recentTxs as List).length >= 3) {
@@ -401,9 +425,9 @@ class TransactionService {
 
     // 2. Spike Check: Max 400% of last 10 transactions average
     final lastTenTxs = await _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .select('amount')
-        .eq('sender_id', userId)
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .limit(10);
     
@@ -429,12 +453,14 @@ class TransactionService {
     if (userId == null) return Stream.value(_getMockTransactions());
 
     return _supabase
-        .from('transactions')
+        .from('ledger_entries')
         .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
-        .map((data) {
+        .asyncMap((data) async {
           if (data.isEmpty) return _getMockTransactions();
-          return data.map((json) => VaultTransaction.fromJson(json)).toList();
+          final transactions = data.map((json) => VaultTransaction.fromJson(json)).toList();
+          return await _attachProfilesToTransactions(transactions, userId);
         });
   }
 
@@ -452,32 +478,70 @@ class TransactionService {
 
     try {
       final response = await _supabase
-          .from('transactions')
-          .select('*, sender_profile:profiles!transactions_sender_id_fkey(*), receiver_profile:profiles!transactions_receiver_id_fkey(*)')
-          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .from('ledger_entries')
+          .select()
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isEmpty) return _getMockTransactions();
       
-      _cache.saveTransactionHistory(transactions);
-      return transactions;
+      final withProfiles = await _attachProfilesToTransactions(transactions, userId);
+      _cache.saveTransactionHistory(withProfiles);
+      return withProfiles;
     } catch (e) {
       return _getMockTransactions();
     }
   }
 
+  Future<List<VaultTransaction>> _attachProfilesToTransactions(List<VaultTransaction> transactions, String userId) async {
+    final Set<String> otherIds = {};
+    for (var tx in transactions) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null) otherIds.add(otherId);
+      }
+    }
+
+    if (otherIds.isEmpty) return transactions;
+
+    final profilesResponse = await _supabase
+        .from('profiles')
+        .select()
+        .inFilter('id', otherIds.toList());
+
+    if (profilesResponse == null) return transactions;
+
+    final Map<String, VaultUser> profileMap = {
+      for (var p in (profilesResponse as List)) p['id']: VaultUser.fromJson(p)
+    };
+
+    return transactions.map((tx) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null && profileMap.containsKey(otherId)) {
+          final profile = profileMap[otherId];
+          return tx.senderId == userId 
+              ? tx.copyWith(receiverProfile: profile)
+              : tx.copyWith(senderProfile: profile);
+        }
+      }
+      return tx;
+    }).toList();
+  }
+
   void _refreshTransactionHistoryInBackground(String userId) async {
     try {
       final response = await _supabase
-          .from('transactions')
-          .select('*, sender_profile:profiles!transactions_sender_id_fkey(*), receiver_profile:profiles!transactions_receiver_id_fkey(*)')
-          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .from('ledger_entries')
+          .select()
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isNotEmpty) {
-        _cache.saveTransactionHistory(transactions);
+        final withProfiles = await _attachProfilesToTransactions(transactions, userId);
+        _cache.saveTransactionHistory(withProfiles);
       }
     } catch (e) {
       // Silent error for background refresh

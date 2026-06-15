@@ -151,17 +151,54 @@ class DashboardService {
     if (userId == null) throw Exception('User not authenticated');
 
     final response = await _supabase
-        .from('transactions')
-        .select('''
-          *,
-          sender_profile:profiles!transactions_sender_id_fkey(*),
-          receiver_profile:profiles!transactions_receiver_id_fkey(*)
-        ''')
-        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .from('ledger_entries')
+        .select()
+        .eq('user_id', userId)
         .order('created_at', ascending: false);
 
     if (response == null) return [];
-    return (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
+    
+    final List<Map<String, dynamic>> rawEntries = List<Map<String, dynamic>>.from(response);
+    
+    // 1. Map to VaultTransaction initially to extract IDs
+    final List<VaultTransaction> transactions = rawEntries.map((json) => VaultTransaction.fromJson(json)).toList();
+    
+    // 2. Identify unique "other party" IDs
+    final Set<String> otherIds = {};
+    for (var tx in transactions) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null) otherIds.add(otherId);
+      }
+    }
+    
+    // 3. Fetch all required profiles in one go
+    if (otherIds.isEmpty) return transactions;
+    
+    final profilesResponse = await _supabase
+        .from('profiles')
+        .select()
+        .inFilter('id', otherIds.toList());
+        
+    if (profilesResponse == null) return transactions;
+    
+    final Map<String, VaultUser> profileMap = {
+      for (var p in (profilesResponse as List)) p['id']: VaultUser.fromJson(p)
+    };
+    
+    // 4. Attach profiles back to transactions
+    return transactions.map((tx) {
+      if (tx.type == 'transfer') {
+        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+        if (otherId != null && profileMap.containsKey(otherId)) {
+          final profile = profileMap[otherId];
+          return tx.senderId == userId 
+              ? tx.copyWith(receiverProfile: profile)
+              : tx.copyWith(senderProfile: profile);
+        }
+      }
+      return tx;
+    }).toList();
   }
 
   // Module 4: AI Insights & Proactive Alerts
@@ -307,31 +344,46 @@ class DashboardService {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
+    // 1. Fetch from 'transactions' table to count frequency
     final response = await _supabase
         .from('transactions')
         .select('receiver_id')
         .eq('sender_id', userId)
-        .order('created_at', ascending: false)
-        .limit(20);
+        .eq('status', 'completed');
 
-    if (response == null) return [];
+    if (response == null || (response as List).isEmpty) return [];
 
-    final receiverIds = (response as List)
-        .where((t) => t['receiver_id'] != null)
-        .map((t) => t['receiver_id'] as String)
-        .toSet()
-        .take(4)
-        .toList();
+    // 2. Count frequencies of receiver_id
+    final Map<String, int> frequencies = {};
+    for (var entry in (response as List)) {
+      final recipientId = entry['receiver_id'] as String?;
+      if (recipientId != null) {
+        frequencies[recipientId] = (frequencies[recipientId] ?? 0) + 1;
+      }
+    }
 
-    if (receiverIds.isEmpty) return [];
+    if (frequencies.isEmpty) return [];
 
+    // 3. Sort by frequency and take top IDs
+    final sortedIds = frequencies.keys.toList()
+      ..sort((a, b) => frequencies[b]!.compareTo(frequencies[a]!));
+    
+    final topIds = sortedIds.take(10).toList();
+
+    // 4. Fetch profiles for these top IDs
     final profilesResponse = await _supabase
         .from('profiles')
         .select()
-        .inFilter('id', receiverIds);
+        .inFilter('id', topIds);
 
     if (profilesResponse == null) return [];
-    return (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+    
+    final profiles = (profilesResponse as List).map((json) => VaultUser.fromJson(json)).toList();
+    
+    // Maintain frequency order
+    profiles.sort((a, b) => frequencies[b.id]!.compareTo(frequencies[a.id]!));
+    
+    return profiles;
   }
 
   Future<List<VaultUser>> getSuggestedUsers() async {

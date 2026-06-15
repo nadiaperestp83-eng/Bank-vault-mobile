@@ -22,6 +22,18 @@ class AiAdvisorLoaded extends AiAdvisorState {
     this.error,
   });
 
+  AiAdvisorLoaded copyWith({
+    List<AiChatMessage>? messages,
+    bool? isTyping,
+    String? error,
+  }) {
+    return AiAdvisorLoaded(
+      messages: messages ?? this.messages,
+      isTyping: isTyping ?? this.isTyping,
+      error: error ?? this.error,
+    );
+  }
+
   @override
   List<Object?> get props => [messages, isTyping, error];
 }
