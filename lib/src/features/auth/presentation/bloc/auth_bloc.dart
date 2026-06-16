@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vault_os/src/services/auth_service.dart';
+import 'package:vault_os/src/services/integrity_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -18,6 +19,15 @@ AuthBloc({required AuthService authService})
 }
 
 Future<void> _onAppStarted(AppStarted event, Emitter<VaultAuthState> emit) async {
+  // 1. Check Device Integrity First
+  final integrity = await IntegrityService.checkDeviceIntegrity();
+  if (!integrity['isSafe']!) {
+    emit(VaultSecurityCompromised(
+      integrity['isRooted']! ? 'Device is rooted/jailbroken' : 'Device environment is insecure'
+    ));
+    return;
+  }
+
   final session = _authService.currentSession;
   if (session != null) {
     final userId = session.user.id;

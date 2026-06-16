@@ -13,6 +13,9 @@ import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:flutter/services.dart';
 import 'payment_details_screen.dart';
 
+import 'package:qr_flutter/qr_flutter.dart';
+import 'qr_scanner_screen.dart';
+
 class RecipientDiscoveryScreen extends StatefulWidget {
   const RecipientDiscoveryScreen({super.key});
 
@@ -44,6 +47,114 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
     );
   }
 
+  void _openScanner() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QrScannerScreen()),
+    );
+
+    if (result != null && result is String) {
+      // Fetch user by ID and navigate to details
+      _handleScannedUserId(result);
+    }
+  }
+
+  void _handleScannedUserId(String userId) async {
+    final txService = context.read<TransactionService>();
+    try {
+      final user = await txService.getUserById(userId);
+      if (user != null && mounted) {
+        _onRecipientSelected(user);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _showMyQR() {
+    final userId = context.read<AuthService>().currentUser?.id;
+    if (userId == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.all(AppSizes.p24),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'My Payment QR',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Show this to other Vault users to receive money',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const Spacer(),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: QrImageView(
+                  data: 'vault_user:$userId',
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  foregroundColor: AppColors.primary,
+                ),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -61,6 +172,12 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
           icon: Icon(LucideIcons.arrowLeft, color: primaryTextColor),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.qrCode),
+            onPressed: _showMyQR,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,10 +234,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   Widget _buildScanQRCard(bool isDark) {
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.heavyImpact();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening Scanner...')));
-      },
+      onTap: _openScanner,
       child: GlassCard(
         padding: const EdgeInsets.all(20),
         borderRadius: 24,
@@ -132,7 +246,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(LucideIcons.qrCode, color: AppColors.primary, size: 28),
+              child: const Icon(LucideIcons.scan, color: AppColors.primary, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(

@@ -37,3 +37,10 @@ class VaultAuthError extends VaultAuthState {
   @override
   List<Object?> get props => [message];
 }
+
+class VaultSecurityCompromised extends VaultAuthState {
+  final String reason;
+  VaultSecurityCompromised(this.reason);
+  @override
+  List<Object?> get props => [reason];
+}

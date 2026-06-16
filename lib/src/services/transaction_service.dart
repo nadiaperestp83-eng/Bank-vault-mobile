@@ -415,6 +415,37 @@ class TransactionService {
     if (amount > 100000) {
       throw Exception('Amount exceeds daily limit for unverified users');
     }
+
+    // 3. Daily Aggregate Check: Max 500,000 KES per day
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final dailyTxs = await _supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('user_id', userId)
+        .gte('created_at', '${today}T00:00:00Z');
+    
+    double dailyTotal = amount;
+    for (var tx in (dailyTxs as List)) {
+      dailyTotal += (tx['amount'] as num).toDouble();
+    }
+
+    if (dailyTotal > 500000) {
+      throw Exception('Daily transaction limit of 500,000 KES reached.');
+    }
+  }
+
+  Future<VaultUser?> getUserById(String userId) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
+      
+      return VaultUser.fromJson(response);
+    } catch (e) {
+      return null;
+    }
   }
 
   Stream<List<VaultTransaction>> getTransactionsStream() {
