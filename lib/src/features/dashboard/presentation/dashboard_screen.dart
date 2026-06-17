@@ -99,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 72),
+                        const SizedBox(height: 24),
                         
                         _buildGreeting(context, state.user),
                         const SizedBox(height: 24),
@@ -655,37 +655,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildGreeting(BuildContext context, VaultUser user) {
     final theme = Theme.of(context);
     final hour = DateTime.now().hour;
+    final isDark = theme.brightness == Brightness.dark;
+    
     String greeting;
-    String emoji;
+    IconData greetingIcon;
+    Color iconColor;
 
     if (hour < 12) {
       greeting = 'Good Morning';
-      emoji = '🌅';
+      greetingIcon = LucideIcons.sun;
+      iconColor = Colors.orangeAccent;
     } else if (hour < 17) {
       greeting = 'Good Afternoon';
-      emoji = '☀️';
+      greetingIcon = LucideIcons.cloudSun;
+      iconColor = Colors.amber;
     } else {
       greeting = 'Good Evening';
-      emoji = '🌙';
+      greetingIcon = LucideIcons.moon;
+      iconColor = Colors.indigoAccent;
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$greeting, $emoji',
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 12,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            letterSpacing: 1,
-          ),
+        Row(
+          children: [
+            Icon(
+              greetingIcon,
+              size: 16,
+              color: iconColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              greeting.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
-          user.firstName ?? 'Vault User',
+          '${user.firstName ?? 'Vault'} ${user.lastName ?? 'User'}',
           style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+            fontSize: 28,
             color: theme.colorScheme.onSurface,
+            letterSpacing: -0.5,
           ),
         ),
       ],
