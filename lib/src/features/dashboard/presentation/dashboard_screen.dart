@@ -13,6 +13,7 @@ import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_state.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
+import 'package:vault_os/src/utils/logo_mapper.dart';
 import 'package:vault_os/src/common_widgets/digital_receipt.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -513,67 +514,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentTransactions(BuildContext context, List<VaultTransaction> transactions) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'RECENT ACTIVITY',
-          style: theme.textTheme.labelSmall,
-        ),
-        const SizedBox(height: 16),
-        if (transactions.isEmpty)
-          const GlassCard(child: Center(child: Text('No recent transactions.')))
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: transactions.length > 5 ? 5 : transactions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final tx = transactions[index];
-              final isPositive = tx.type == 'deposit' || (tx.type == 'transfer' && tx.receiverId == Supabase.instance.client.auth.currentUser?.id);
-              
-              return GlassCard(
-                padding: const EdgeInsets.all(AppSizes.p16),
-                child: Row(
-                  children: [
-                    _buildTransactionIcon(context, tx, isPositive),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_getTransactionTitle(tx), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                          Text(_formatTimestamp(tx.createdAt), style: theme.textTheme.labelSmall?.copyWith(fontSize: 8, letterSpacing: 0)),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${isPositive ? '+' : '-'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isPositive ? AppColors.success : AppColors.error,
-                            fontSize: 14,
-                          ),
-                        ),
-                        if (tx.recordedBalance != null)
-                          Text(
-                            'Bal: ${CurrencyFormatter.format(tx.recordedBalance!, tx.currency)}',
-                            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withOpacity(0.4)),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-      ],
-    );
+    return _RecentActivitySection(transactions: transactions);
   }
 
   Widget _buildTransactionIcon(BuildContext context, VaultTransaction tx, bool isPositive) {
@@ -847,5 +788,185 @@ class _AIInsightCardState extends State<_AIInsightCard> with SingleTickerProvide
         );
       },
     );
+  }
+}
+
+class _RecentActivitySection extends StatefulWidget {
+  final List<VaultTransaction> transactions;
+  const _RecentActivitySection({required this.transactions});
+
+  @override
+  State<_RecentActivitySection> createState() => _RecentActivitySectionState();
+}
+
+class _RecentActivitySectionState extends State<_RecentActivitySection> with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+
+    setState(() => _isRefreshing = true);
+    _rotationController.repeat();
+    HapticFeedback.lightImpact();
+
+    try {
+      context.read<DashboardBloc>().add(LoadDashboardData());
+      // Wait a bit for the animation to feel meaningful
+      await Future.delayed(const Duration(milliseconds: 1000));
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+        _rotationController.stop();
+        _rotationController.reset();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final transactions = widget.transactions;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'RECENT ACTIVITY',
+              style: theme.textTheme.labelSmall,
+            ),
+            GestureDetector(
+              onTap: _handleRefresh,
+              child: RotationTransition(
+                turns: _rotationController,
+                child: Icon(
+                  LucideIcons.refreshCw,
+                  size: 16,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (transactions.isEmpty)
+          const GlassCard(child: Center(child: Text('No recent transactions.')))
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: transactions.length > 5 ? 5 : transactions.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final tx = transactions[index];
+              final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+              final isPositive = tx.type == 'deposit' || tx.receiverId == currentUserId;
+              
+              return GlassCard(
+                padding: const EdgeInsets.all(AppSizes.p12),
+                child: Row(
+                  children: [
+                    LogoMapper.getLogo(tx.method, tx.description ?? tx.type),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getTransactionTitle(tx),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            _formatTimestamp(tx.createdAt),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 9,
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${isPositive ? '+' : '-'} ${CurrencyFormatter.format(tx.amount, tx.currency)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isPositive ? AppColors.success : AppColors.error,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (tx.recordedBalance != null)
+                          Text(
+                            'Bal: ${CurrencyFormatter.format(tx.recordedBalance!, tx.currency)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurface.withOpacity(0.4),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  String _getTransactionTitle(VaultTransaction tx) {
+    if (tx.type == 'deposit') {
+      return 'Deposit via ${tx.method?.toUpperCase() ?? "Bank"}';
+    }
+    if (tx.type == 'withdrawal') {
+      return 'Withdrawal to ${tx.method?.toUpperCase() ?? "Bank"}';
+    }
+    if (tx.type == 'transfer') {
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      if (tx.senderId == currentUserId) {
+        final name = tx.receiverProfile?.fullName ?? 'User';
+        return 'Sent to $name';
+      } else {
+        final name = tx.senderProfile?.fullName ?? 'User';
+        return 'Received from $name';
+      }
+    }
+    return tx.description ?? 'Transaction';
+  }
+
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
+    if (diff.inHours < 24) return '${diff.inHours} hours ago';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
