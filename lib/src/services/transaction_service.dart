@@ -448,6 +448,21 @@ class TransactionService {
     }
   }
 
+  Future<VaultUser?> getUserByTag(String tag) async {
+    try {
+      final cleanTag = tag.startsWith('@') ? tag : '@$tag';
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('kyc_tag', cleanTag)
+          .single();
+      
+      return VaultUser.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Stream<List<VaultTransaction>> getTransactionsStream() {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return Stream.value(_getMockTransactions());

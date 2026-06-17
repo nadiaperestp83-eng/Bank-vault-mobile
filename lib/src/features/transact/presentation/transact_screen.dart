@@ -24,7 +24,8 @@ import 'package:vault_os/src/services/biometric_service.dart';
 import 'package:vault_os/src/services/storage_service.dart';
 
 class TransactScreen extends StatefulWidget {
-  const TransactScreen({super.key});
+  final VaultUser? initialRecipient;
+  const TransactScreen({super.key, this.initialRecipient});
 
   @override
   State<TransactScreen> createState() => _TransactScreenState();
@@ -46,6 +47,7 @@ class _TransactScreenState extends State<TransactScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedRecipient = widget.initialRecipient;
     context.read<TransactionBloc>().add(LoadFrequentRecipients());
     _walletSubscription = _dashboardService.getWalletStream().listen((wallet) {
       if (mounted) setState(() => _currentWallet = wallet);
@@ -154,6 +156,11 @@ class _TransactScreenState extends State<TransactScreen> {
           _phoneController.clear();
           _recipientController.clear();
           setState(() => _selectedRecipient = null);
+          
+          // Navigate to home after a brief delay to let the snackbar be seen
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) context.go('/');
+          });
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: AppColors.error),

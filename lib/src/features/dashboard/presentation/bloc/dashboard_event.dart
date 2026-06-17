@@ -7,7 +7,13 @@ abstract class DashboardEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadDashboardData extends DashboardEvent {}
+class LoadDashboardData extends DashboardEvent {
+  final bool isRefresh;
+  LoadDashboardData({this.isRefresh = false});
+
+  @override
+  List<Object?> get props => [isRefresh];
+}
 
 class UpdateWallet extends DashboardEvent {
   final Wallet wallet;

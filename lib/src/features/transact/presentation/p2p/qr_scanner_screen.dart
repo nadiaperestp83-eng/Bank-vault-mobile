@@ -70,11 +70,18 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       
       if (barcodes.isNotEmpty && !_hasDetected) {
         final rawValue = barcodes.first.rawValue;
-        if (rawValue != null && rawValue.startsWith('vault_user:')) {
-          _hasDetected = true;
-          HapticFeedback.heavyImpact();
-          final userId = rawValue.replaceFirst('vault_user:', '');
-          _onUserDetected(userId);
+        if (rawValue != null) {
+          if (rawValue.startsWith('vault_user:')) {
+            _hasDetected = true;
+            HapticFeedback.heavyImpact();
+            final userId = rawValue.replaceFirst('vault_user:', '');
+            _onResultDetected({'type': 'id', 'value': userId});
+          } else if (rawValue.contains('vault.os/pay/')) {
+            _hasDetected = true;
+            HapticFeedback.heavyImpact();
+            final tag = rawValue.split('/pay/').last;
+            _onResultDetected({'type': 'tag', 'value': '@$tag'});
+          }
         }
       }
     } catch (e) {
@@ -84,11 +91,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _isScanning = false;
   }
 
-  void _onUserDetected(String userId) async {
-    // We should ideally fetch the user details here
-    // For now, we'll use a placeholder or trigger a search in the bloc
+  void _onResultDetected(Map<String, String> result) async {
     if (mounted) {
-      Navigator.pop(context, userId);
+      Navigator.pop(context, result);
     }
   }
 

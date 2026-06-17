@@ -487,29 +487,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final initials = ((user.firstName?.isNotEmpty ?? false) ? user.firstName![0] : '') + 
                      ((user.lastName?.isNotEmpty ?? false) ? user.lastName![0] : '');
     
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: isFrequent ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.go('/transact', extra: user);
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: isFrequent ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
+            ),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: isFrequent ? theme.colorScheme.primary.withValues(alpha: 0.2) : theme.colorScheme.primary.withValues(alpha: 0.1),
+              backgroundImage: (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty) 
+                  ? NetworkImage(user.profilePhotoUrl!) 
+                  : null,
+              child: (user.profilePhotoUrl == null || user.profilePhotoUrl!.isEmpty) ? Text(
+                initials,
+                style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+              ) : null,
+            ),
           ),
-          child: CircleAvatar(
-            radius: 28,
-            backgroundColor: isFrequent ? theme.colorScheme.primary.withValues(alpha: 0.2) : theme.colorScheme.primary.withValues(alpha: 0.1),
-            backgroundImage: (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty) 
-                ? NetworkImage(user.profilePhotoUrl!) 
-                : null,
-            child: (user.profilePhotoUrl == null || user.profilePhotoUrl!.isEmpty) ? Text(
-              initials,
-              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-            ) : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(user.firstName ?? 'User', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-      ],
+          const SizedBox(height: 8),
+          Text(user.firstName ?? 'User', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
@@ -828,7 +834,7 @@ class _RecentActivitySectionState extends State<_RecentActivitySection> with Sin
     try {
       // Clear data by emitting a temporary state or just resetting the transactions locally if needed
       // But since we use BLoC, we should tell the BLoC to reload which usually emits loading
-      context.read<DashboardBloc>().add(LoadDashboardData());
+      context.read<DashboardBloc>().add(LoadDashboardData(isRefresh: true));
       
       // Wait for the animation and for the data to actually start loading
       await Future.delayed(const Duration(milliseconds: 1000));
