@@ -5,9 +5,44 @@ import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 
 import 'package:vault_os/src/features/transact/presentation/p2p/qr_scanner_screen.dart';
+import 'package:vault_os/src/features/transact/presentation/p2p/payment_details_screen.dart';
+import 'package:vault_os/src/services/transaction_service.dart';
+import 'package:vault_os/src/models/vault_models.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class FloatingAdvisor extends StatelessWidget {
   const FloatingAdvisor({super.key});
+
+  void _handleScanResult(BuildContext context, Map<String, String> result) async {
+    final txService = context.read<TransactionService>();
+    try {
+      VaultUser? user;
+      if (result['type'] == 'id') {
+        user = await txService.getUserById(result['value']!);
+      } else if (result['type'] == 'tag') {
+        user = await txService.getUserByTag(result['value']!);
+      }
+
+      if (user != null && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentDetailsScreen(recipient: user!),
+          ),
+        );
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +61,8 @@ class FloatingAdvisor extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => const QrScannerScreen()),
               );
               if (result != null && result is Map<String, String>) {
-                // For now, let's just open the advisor
                 if (context.mounted) {
-                  context.push('/ai-advisor');
+                  _handleScanResult(context, result);
                 }
               }
             },

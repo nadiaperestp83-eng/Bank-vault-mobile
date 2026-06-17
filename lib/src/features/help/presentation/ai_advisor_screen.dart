@@ -12,8 +12,6 @@ import 'package:vault_os/src/features/help/presentation/bloc/ai_advisor_event.da
 import 'package:vault_os/src/features/help/presentation/bloc/ai_advisor_state.dart';
 import 'package:vault_os/src/models/ai_advisor_model.dart';
 
-import 'package:vault_os/src/features/transact/presentation/p2p/qr_scanner_screen.dart';
-
 class AiAdvisorScreen extends StatefulWidget {
   const AiAdvisorScreen({super.key});
 
@@ -94,19 +92,6 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.scanLine, size: 20, color: Colors.grey),
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const QrScannerScreen()),
-              );
-              if (result != null && mounted) {
-                // If it's a vault user ID, maybe we should format it or just paste it
-                _messageController.text = result.toString();
-              }
-            },
-          ),
           IconButton(
             icon: const Icon(LucideIcons.trash2, size: 20, color: Colors.grey),
             onPressed: () {
