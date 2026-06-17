@@ -27,6 +27,7 @@ class RecipientDiscoveryScreen extends StatefulWidget {
 
 class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  String? _scannedUserId;
 
   @override
   void initState() {
@@ -71,16 +72,24 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
       }
 
       if (user != null && mounted) {
-        // First, add to the bloc's search results so they appear in the list
+        // First, update search to show the user
         context.read<TransactionBloc>().add(SearchRecipients(user.kycTag ?? ''));
         
-        HapticFeedback.mediumImpact();
+        setState(() => _scannedUserId = user!.id);
+        HapticFeedback.heavyImpact();
         
-        // Brief delay to allow UI to update and show user being "selected"
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Brief delay to show highlight
+        await Future.delayed(const Duration(milliseconds: 1000));
         
         if (mounted) {
-          _onRecipientSelected(user);
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentDetailsScreen(recipient: user!),
+            ),
+          );
+          // Clear highlight when returning
+          setState(() => _scannedUserId = null);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -318,14 +327,32 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
           separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final user = recipients[index];
+            final isScanned = user.id == _scannedUserId;
+
             return GestureDetector(
               onTap: () => _onRecipientSelected(user),
-              child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                borderRadius: 20,
-                child: Row(
-                  children: [
-                    CircleAvatar(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isScanned ? AppColors.primary : Colors.transparent,
+                    width: 2,
+                  ),
+                  boxShadow: isScanned ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    )
+                  ] : null,
+                ),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(16),
+                  borderRadius: 20,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       backgroundImage: (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty)
@@ -352,10 +379,11 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 }
