@@ -71,7 +71,17 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
       }
 
       if (user != null && mounted) {
-        _onRecipientSelected(user);
+        // First, add to the bloc's search results so they appear in the list
+        context.read<TransactionBloc>().add(SearchRecipients(user.kycTag ?? ''));
+        
+        HapticFeedback.mediumImpact();
+        
+        // Brief delay to allow UI to update and show user being "selected"
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          _onRecipientSelected(user);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),
@@ -84,9 +94,20 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
     }
   }
 
-  void _showMyQR() {
-    final userId = context.read<AuthService>().currentUser?.id;
-    if (userId == null) return;
+  void _showMyQR() async {
+    final txService = context.read<TransactionService>();
+    final profile = await txService.getCurrentUserProfile();
+    
+    if (profile == null || profile.kycTag == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please complete KYC to get a payment QR')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -115,10 +136,16 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             const SizedBox(height: 8),
+            Text(
+              '${profile.fullName} (${profile.kycTag})',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
             const Text(
               'Show this to other Vault users to receive money',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
             const Spacer(),
             Center(
@@ -136,7 +163,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
                   ],
                 ),
                 child: QrImageView(
-                  data: 'vault_user:$userId',
+                  data: 'vault.os/pay/${profile.kycTag!.replaceAll('@', '')}',
                   version: QrVersions.auto,
                   size: 200.0,
                   foregroundColor: AppColors.primary,
