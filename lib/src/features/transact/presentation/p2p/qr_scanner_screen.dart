@@ -70,11 +70,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       
       if (barcodes.isNotEmpty && !_hasDetected) {
         final rawValue = barcodes.first.rawValue;
-        if (rawValue != null && rawValue.startsWith('vault_user:')) {
+        if (rawValue != null) {
           _hasDetected = true;
           HapticFeedback.heavyImpact();
-          final userId = rawValue.replaceFirst('vault_user:', '');
-          _onUserDetected(userId);
+          if (mounted) {
+            Navigator.pop(context, rawValue);
+          }
         }
       }
     } catch (e) {

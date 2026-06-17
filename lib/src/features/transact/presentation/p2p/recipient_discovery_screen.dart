@@ -61,7 +61,10 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
     }
   }
 
-  void _handleScannedUserId(String userId) async {
+  void _handleScannedUserId(String result) async {
+    final userId = result.startsWith('vault_user:')
+        ? result.replaceFirst('vault_user:', '')
+        : result;
     final txService = context.read<TransactionService>();
     try {
       final user = await txService.getUserById(userId);
