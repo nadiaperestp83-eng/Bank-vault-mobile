@@ -73,8 +73,16 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         if (rawValue != null) {
           _hasDetected = true;
           HapticFeedback.heavyImpact();
-          if (mounted) {
-            Navigator.pop(context, rawValue);
+          
+          if (rawValue.startsWith('vault_user:')) {
+            final userId = rawValue.replaceFirst('vault_user:', '');
+            _onResultDetected({'type': 'id', 'value': userId});
+          } else if (rawValue.contains('vault.os/pay/')) {
+            final tag = rawValue.split('/pay/').last;
+            _onResultDetected({'type': 'tag', 'value': '@$tag'});
+          } else {
+            // Support generic QR codes (e.g. for Vault Advisor)
+            _onResultDetected({'type': 'raw', 'value': rawValue});
           }
         }
       }
@@ -85,11 +93,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _isScanning = false;
   }
 
-  void _onUserDetected(String userId) async {
-    // We should ideally fetch the user details here
-    // For now, we'll use a placeholder or trigger a search in the bloc
+  void _onResultDetected(Map<String, String> result) async {
     if (mounted) {
-      Navigator.pop(context, userId);
+      Navigator.pop(context, result);
     }
   }
 

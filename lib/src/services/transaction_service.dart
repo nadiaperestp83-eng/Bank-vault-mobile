@@ -448,59 +448,47 @@ class TransactionService {
     }
   }
 
+  Future<VaultUser?> getUserByTag(String tag) async {
+    try {
+      final cleanTag = tag.startsWith('@') ? tag : '@$tag';
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('kyc_tag', cleanTag)
+          .single();
+      
+      return VaultUser.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Stream<List<VaultTransaction>> getTransactionsStream() {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return Stream.value(_getMockTransactions());
 
+    // We listen to all changes in transactions and filter client-side 
+    // because complex OR filters are limited in realtime-js
     return _supabase
-        .from('ledger_entries')
+        .from('transactions')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .asyncMap((data) async {
-          if (data.isEmpty) return _getMockTransactions();
-          final transactions = data.map((json) => VaultTransaction.fromJson(json)).toList();
-          return await _attachProfilesToTransactions(transactions, userId);
+          final transactions = data
+              .where((json) => json['sender_id'] == userId || json['receiver_id'] == userId)
+              .map((json) => VaultTransaction.fromJson(json))
+              .toList();
+          
+          if (transactions.isEmpty) return _getMockTransactions();
+          return await _attachProfiles(transactions, userId);
         });
   }
 
-  Future<List<VaultTransaction>> getTransactionHistory() async {
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) return _getMockTransactions();
-
-    // Try cache first
-    final cached = await _cache.getCachedTransactionHistory();
-    if (cached != null && cached.isNotEmpty) {
-      // Return cached immediately and refresh in background if needed
-      _refreshTransactionHistoryInBackground(userId);
-      return cached;
-    }
-
-    try {
-      final response = await _supabase
-          .from('ledger_entries')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
-
-      final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
-      if (transactions.isEmpty) return _getMockTransactions();
-      
-      final withProfiles = await _attachProfilesToTransactions(transactions, userId);
-      _cache.saveTransactionHistory(withProfiles);
-      return withProfiles;
-    } catch (e) {
-      return _getMockTransactions();
-    }
-  }
-
-  Future<List<VaultTransaction>> _attachProfilesToTransactions(List<VaultTransaction> transactions, String userId) async {
+  Future<List<VaultTransaction>> _attachProfiles(List<VaultTransaction> transactions, String userId) async {
     final Set<String> otherIds = {};
     for (var tx in transactions) {
-      if (tx.type == 'transfer') {
-        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
-        if (otherId != null) otherIds.add(otherId);
-      }
+      final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+      if (otherId != null) otherIds.add(otherId);
     }
 
     if (otherIds.isEmpty) return transactions;
@@ -517,31 +505,65 @@ class TransactionService {
     };
 
     return transactions.map((tx) {
-      if (tx.type == 'transfer') {
-        final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
-        if (otherId != null && profileMap.containsKey(otherId)) {
-          final profile = profileMap[otherId];
-          return tx.senderId == userId 
-              ? tx.copyWith(receiverProfile: profile)
-              : tx.copyWith(senderProfile: profile);
-        }
+      final otherId = tx.senderId == userId ? tx.receiverId : tx.senderId;
+      if (otherId != null && profileMap.containsKey(otherId)) {
+        final profile = profileMap[otherId];
+        return tx.senderId == userId 
+            ? tx.copyWith(receiverProfile: profile)
+            : tx.copyWith(senderProfile: profile);
       }
       return tx;
     }).toList();
   }
 
+  Future<List<VaultTransaction>> getTransactionHistory() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return _getMockTransactions();
+
+    // Try cache first
+    final cached = await _cache.getCachedTransactionHistory();
+    if (cached != null && cached.isNotEmpty) {
+      // Return cached immediately and refresh in background if needed
+      _refreshTransactionHistoryInBackground(userId);
+      return cached;
+    }
+
+    try {
+      final response = await _supabase
+          .from('transactions')
+          .select('''
+            *,
+            sender:profiles!sender_id(first_name, last_name, kyc_tag, profile_photo_url),
+            receiver:profiles!receiver_id(first_name, last_name, kyc_tag, profile_photo_url)
+          ''')
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .order('created_at', ascending: false);
+
+      final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
+      if (transactions.isEmpty) return _getMockTransactions();
+      
+      _cache.saveTransactionHistory(transactions);
+      return transactions;
+    } catch (e) {
+      return _getMockTransactions();
+    }
+  }
+
   void _refreshTransactionHistoryInBackground(String userId) async {
     try {
       final response = await _supabase
-          .from('ledger_entries')
-          .select()
-          .eq('user_id', userId)
+          .from('transactions')
+          .select('''
+            *,
+            sender:profiles!sender_id(first_name, last_name, kyc_tag, profile_photo_url),
+            receiver:profiles!receiver_id(first_name, last_name, kyc_tag, profile_photo_url)
+          ''')
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
           .order('created_at', ascending: false);
 
       final transactions = (response as List).map((json) => VaultTransaction.fromJson(json)).toList();
       if (transactions.isNotEmpty) {
-        final withProfiles = await _attachProfilesToTransactions(transactions, userId);
-        _cache.saveTransactionHistory(withProfiles);
+        _cache.saveTransactionHistory(transactions);
       }
     } catch (e) {
       // Silent error for background refresh

@@ -4,7 +4,21 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../constants/app_colors.dart';
 
 class LogoMapper {
-  static Widget getLogo(String? method, String? description) {
+  static Widget getLogo(String? method, String? description, {String? profilePhotoUrl}) {
+    if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          image: DecorationImage(
+            image: NetworkImage(profilePhotoUrl),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
     final desc = description?.toLowerCase() ?? '';
     final meth = method?.toLowerCase() ?? '';
 

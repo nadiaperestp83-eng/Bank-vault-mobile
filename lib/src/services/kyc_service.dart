@@ -20,6 +20,23 @@ class KycService {
     return response['kyc_status'] == 'verified';
   }
 
+  // Get user profile name for validation
+  Future<Map<String, String>> getUserProfileNames() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final response = await _supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+    return {
+      'firstName': (response['first_name'] as String).toUpperCase(),
+      'lastName': (response['last_name'] as String).toUpperCase(),
+    };
+  }
+
   // 2. Scan Document (ML Kit)
   Future<String> scanDocument(File imageFile) async {
     final inputImage = InputImage.fromFile(imageFile);

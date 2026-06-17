@@ -55,19 +55,21 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
       MaterialPageRoute(builder: (context) => const QrScannerScreen()),
     );
 
-    if (result != null && result is String) {
-      // Fetch user by ID and navigate to details
-      _handleScannedUserId(result);
+    if (result != null && result is Map<String, String>) {
+      _handleScanResult(result);
     }
   }
 
-  void _handleScannedUserId(String result) async {
-    final userId = result.startsWith('vault_user:')
-        ? result.replaceFirst('vault_user:', '')
-        : result;
+  void _handleScanResult(Map<String, String> result) async {
     final txService = context.read<TransactionService>();
     try {
-      final user = await txService.getUserById(userId);
+      VaultUser? user;
+      if (result['type'] == 'id') {
+        user = await txService.getUserById(result['value']!);
+      } else if (result['type'] == 'tag') {
+        user = await txService.getUserByTag(result['value']!);
+      }
+
       if (user != null && mounted) {
         _onRecipientSelected(user);
       } else {

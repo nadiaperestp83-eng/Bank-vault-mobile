@@ -19,6 +19,7 @@ import 'package:vault_os/src/features/auth/presentation/login_screen.dart';
 import 'package:vault_os/src/features/auth/presentation/signup_screen.dart';
 import 'package:vault_os/src/features/help/presentation/ai_advisor_screen.dart';
 import 'package:vault_os/src/features/help/presentation/widgets/floating_advisor.dart';
+import 'package:vault_os/src/models/vault_models.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -29,10 +30,16 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _currentIndex = 0;
+  int get _currentIndex {
+    final String location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/finance')) return 1;
+    if (location.startsWith('/transact')) return 2;
+    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/help')) return 4;
+    return 0; // Default to Home
+  }
 
   void _onTap(BuildContext context, int index) {
-    setState(() => _currentIndex = index);
     switch (index) {
       case 0:
         context.go('/');
@@ -177,7 +184,10 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/transact',
-          builder: (context, state) => const TransactScreen(),
+          builder: (context, state) {
+            final user = state.extra as VaultUser?;
+            return TransactScreen(initialRecipient: user);
+          },
           routes: [
             GoRoute(
               path: 'p2p',

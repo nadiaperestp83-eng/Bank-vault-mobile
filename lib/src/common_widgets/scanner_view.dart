@@ -21,6 +21,7 @@ class _ScannerViewState extends State<ScannerView> {
   bool _handDetected = false;
   bool _hasIdBeenDetected = false;
   String _idNumber = '';
+  Map<String, String>? _profileNames;
   final KycService _kycService = KycService();
 
   @override
@@ -28,6 +29,20 @@ class _ScannerViewState extends State<ScannerView> {
     super.initState();
     _initializeCamera();
     _initializeObjectDetector();
+    _loadProfileNames();
+  }
+
+  Future<void> _loadProfileNames() async {
+    try {
+      final names = await _kycService.getUserProfileNames();
+      if (mounted) {
+        setState(() {
+          _profileNames = names;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile names: $e');
+    }
   }
 
   void _initializeObjectDetector() {
@@ -96,6 +111,7 @@ class _ScannerViewState extends State<ScannerView> {
       // 2. Detect Text (ID)
       String? detectedId;
       bool idFoundInText = false;
+      bool namesMatch = false;
       
       final recognizedText = await _textRecognizer.processImage(inputImage);
       final text = recognizedText.text.toUpperCase();
@@ -109,6 +125,17 @@ class _ScannerViewState extends State<ScannerView> {
       if (idNumberMatch != null) {
         idFoundInText = true;
         detectedId = idNumberMatch.group(0);
+
+        // Check if names match the profile
+        if (_profileNames != null) {
+          final firstName = _profileNames!['firstName']!;
+          final lastName = _profileNames!['lastName']!;
+          
+          // Use a more flexible name matching: both names must be present in the text
+          if (text.contains(firstName) && text.contains(lastName)) {
+            namesMatch = true;
+          }
+        }
       }
 
       if (mounted) {
@@ -117,17 +144,21 @@ class _ScannerViewState extends State<ScannerView> {
           
           if (!_hasIdBeenDetected) {
             if (idFoundInText && hasIdKeywords) {
-              _hasIdBeenDetected = true;
-              _idNumber = detectedId!;
-              _message = 'ID Detected! Now hold it with your hand';
-              
-              // TIMEOUT FALLBACK: If hand detection fails for 4 seconds after ID is found,
-              // assume the user is holding it and proceed.
-              Future.delayed(const Duration(seconds: 4), () {
-                if (mounted && _hasIdBeenDetected && !_handDetected) {
-                  _finalizeVerification(_idNumber);
-                }
-              });
+              if (namesMatch) {
+                _hasIdBeenDetected = true;
+                _idNumber = detectedId!;
+                _message = 'ID Detected! Now hold it with your hand';
+                
+                // TIMEOUT FALLBACK: If hand detection fails for 4 seconds after ID is found,
+                // assume the user is holding it and proceed.
+                Future.delayed(const Duration(seconds: 4), () {
+                  if (mounted && _hasIdBeenDetected && !_handDetected) {
+                    _finalizeVerification(_idNumber);
+                  }
+                });
+              } else {
+                _message = 'Name mismatch: Ensure this is YOUR ID card';
+              }
             } else {
               _message = 'Align your ID within the frame';
             }

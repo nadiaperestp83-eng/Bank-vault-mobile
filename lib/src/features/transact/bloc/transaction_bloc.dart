@@ -93,10 +93,12 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       PerformVaultTransfer event, Emitter<TransactionState> emit) async {
     emit(TransactionInProgress('Verifying PIN...'));
     try {
-      final isPinValid = await transactionService.verifyPin(event.pin);
-      if (!isPinValid) {
-        emit(TransactionError('Invalid Transaction PIN'));
-        return;
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
       }
 
       emit(TransactionInProgress('Processing transfer...'));
@@ -118,10 +120,12 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       PerformMpesaDeposit event, Emitter<TransactionState> emit) async {
     emit(TransactionInProgress('Verifying PIN...'));
     try {
-      final isPinValid = await transactionService.verifyPin(event.pin);
-      if (!isPinValid) {
-        emit(TransactionError('Invalid Transaction PIN'));
-        return;
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
       }
 
       emit(TransactionInProgress('Requesting M-Pesa STK Push...'));
@@ -162,10 +166,12 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       PerformWithdrawal event, Emitter<TransactionState> emit) async {
     emit(TransactionInProgress('Verifying PIN...'));
     try {
-      final isPinValid = await transactionService.verifyPin(event.pin);
-      if (!isPinValid) {
-        emit(TransactionError('Invalid Transaction PIN'));
-        return;
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
       }
 
       // Fraud protection & balance check

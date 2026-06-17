@@ -25,9 +25,7 @@ class FloatingAdvisor extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (context) => const QrScannerScreen()),
               );
-              if (result != null) {
-                // Navigate to advisor with the scanned data if needed, 
-                // or just open advisor and let it handle?
+              if (result != null && result is Map<String, String>) {
                 // For now, let's just open the advisor
                 if (context.mounted) {
                   context.push('/ai-advisor');

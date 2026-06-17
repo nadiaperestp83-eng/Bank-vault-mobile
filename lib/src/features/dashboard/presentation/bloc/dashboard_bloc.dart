@@ -51,31 +51,33 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       LoadDashboardData event, Emitter<DashboardState> emit) async {
     // If we already have data in memory, just background refresh
     if (state is DashboardLoaded) {
-      _backgroundRefresh();
+      _backgroundRefresh(force: event.isRefresh);
       return;
     }
 
-    // Try loading from cache first
-    final cachedData = await _dashboardCache.getCachedDashboardData();
-    if (cachedData != null) {
-      emit(DashboardLoaded(
-        user: cachedData['user'] as VaultUser,
-        wallet: cachedData['wallet'] as Wallet,
-        transactions: cachedData['transactions'] as List<VaultTransaction>,
-        growthData: cachedData['growthData'] as Map<String, dynamic>,
-        notifications: cachedData['notifications'] as List<VaultNotification>,
-        receipts: cachedData['receipts'] as List<VaultReceipt>,
-        frequentContacts: cachedData['frequentContacts'] as List<VaultUser>,
-        suggestedUsers: cachedData['suggestedUsers'] as List<VaultUser>,
-        currencyRates: cachedData['currencyRates'] as Map<String, double>,
-        latestInsight: cachedData['latestInsight'] as String?,
-        lastUpdated: cachedData['cachedAt'] as DateTime,
-      ));
-      
-      // Start subscriptions and background refresh
-      _initSubscriptions();
-      _backgroundRefresh();
-      return;
+    // Try loading from cache first if not a force refresh
+    if (!event.isRefresh) {
+      final cachedData = await _dashboardCache.getCachedDashboardData();
+      if (cachedData != null) {
+        emit(DashboardLoaded(
+          user: cachedData['user'] as VaultUser,
+          wallet: cachedData['wallet'] as Wallet,
+          transactions: cachedData['transactions'] as List<VaultTransaction>,
+          growthData: cachedData['growthData'] as Map<String, dynamic>,
+          notifications: cachedData['notifications'] as List<VaultNotification>,
+          receipts: cachedData['receipts'] as List<VaultReceipt>,
+          frequentContacts: cachedData['frequentContacts'] as List<VaultUser>,
+          suggestedUsers: cachedData['suggestedUsers'] as List<VaultUser>,
+          currencyRates: cachedData['currencyRates'] as Map<String, double>,
+          latestInsight: cachedData['latestInsight'] as String?,
+          lastUpdated: cachedData['cachedAt'] as DateTime,
+        ));
+        
+        // Start subscriptions and background refresh
+        _initSubscriptions();
+        _backgroundRefresh();
+        return;
+      }
     }
     
     emit(DashboardLoading());
@@ -166,9 +168,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  void _backgroundRefresh() {
+  void _backgroundRefresh({bool force = false}) {
     // Throttle refreshes to once every 60 seconds for background updates
-    if (state is DashboardLoaded) {
+    // unless force is true
+    if (state is DashboardLoaded && !force) {
       final currentState = state as DashboardLoaded;
       if (DateTime.now().difference(currentState.lastUpdated).inSeconds < 60) {
         return;

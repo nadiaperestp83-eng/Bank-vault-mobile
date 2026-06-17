@@ -274,26 +274,28 @@ class VaultTransaction extends Equatable {
     final rawAmount = (json['amount'] as num?)?.toDouble() ?? 0.0;
     
     // For ledger entries, we infer sender/receiver
-    String? senderId;
-    String? receiverId;
+    String? senderId = json['sender_id'] as String?;
+    String? receiverId = json['receiver_id'] as String?;
     
-    if (type == 'transfer') {
-      if (rawAmount < 0) {
-        // I am the sender
-        senderId = userId;
-        receiverId = metadata['recipient_id'] as String?;
+    if (senderId == null && receiverId == null) {
+      if (type == 'transfer') {
+        if (rawAmount < 0) {
+          // I am the sender
+          senderId = userId;
+          receiverId = metadata['recipient_id'] as String?;
+        } else {
+          // I am the receiver
+          senderId = metadata['sender_id'] as String?;
+          receiverId = userId;
+        }
       } else {
-        // I am the receiver
-        senderId = metadata['sender_id'] as String?;
+        senderId = userId;
         receiverId = userId;
       }
-    } else {
-      senderId = userId;
-      receiverId = userId;
     }
 
     return VaultTransaction(
-      id: json['id'] ?? '',
+      id: json['id']?.toString() ?? '',
       senderId: senderId,
       receiverId: receiverId,
       amount: rawAmount.abs(),
@@ -305,13 +307,13 @@ class VaultTransaction extends Equatable {
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
       description: json['description'] as String?,
-      recordedBalance: (metadata['recorded_balance'] as num?)?.toDouble(),
-      senderProfile: json['sender_profile'] != null 
-          ? VaultUser.fromJson(json['sender_profile']) 
-          : null,
-      receiverProfile: json['receiver_profile'] != null 
-          ? VaultUser.fromJson(json['receiver_profile']) 
-          : null,
+      recordedBalance: (json['recorded_balance'] as num?)?.toDouble() ?? (metadata['recorded_balance'] as num?)?.toDouble(),
+      senderProfile: json['sender'] != null 
+          ? VaultUser.fromJson(json['sender']) 
+          : (json['sender_profile'] != null ? VaultUser.fromJson(json['sender_profile']) : null),
+      receiverProfile: json['receiver'] != null 
+          ? VaultUser.fromJson(json['receiver']) 
+          : (json['receiver_profile'] != null ? VaultUser.fromJson(json['receiver_profile']) : null),
     );
   }
 
