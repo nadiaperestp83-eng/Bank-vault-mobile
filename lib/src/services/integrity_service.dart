@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:safe_device/safe_device.dart';
 import 'package:flutter/foundation.dart';
 
@@ -18,10 +17,10 @@ class IntegrityService {
 
     bool isRooted = await SafeDevice.isJailBroken;
     bool isRealDevice = await SafeDevice.isRealDevice;
-    bool isDevelopmentMode = await SafeDevice.isDevelopmentModeEnabled;
+    bool isDevelopmentMode = await SafeDevice.isDevelopmentModeEnable;
     
     // Some apps also check for external storage or mock locations
-    bool isMockLocation = await SafeDevice.canMockLocation;
+    bool isMockLocation = await SafeDevice.isMockLocation;
 
     bool isSafe = !isRooted && isRealDevice && !isMockLocation;
 

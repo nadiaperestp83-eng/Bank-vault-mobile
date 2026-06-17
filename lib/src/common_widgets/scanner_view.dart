@@ -19,6 +19,8 @@ class _ScannerViewState extends State<ScannerView> {
   bool _isScanning = false;
   String _message = 'Align your ID within the frame';
   bool _handDetected = false;
+  bool _hasIdBeenDetected = false;
+  String _idNumber = '';
   final KycService _kycService = KycService();
 
   @override
@@ -78,35 +80,67 @@ class _ScannerViewState extends State<ScannerView> {
       bool handInFrame = false;
       for (final obj in objects) {
         for (final label in obj.labels) {
-          if (label.text.toLowerCase().contains('hand') || 
-              label.text.toLowerCase().contains('person')) {
+          final labelText = label.text.toLowerCase();
+          if (labelText.contains('hand') || 
+              labelText.contains('person') || 
+              labelText.contains('finger') ||
+              labelText.contains('arm') ||
+              labelText.contains('thumb') ||
+              labelText.contains('wrist')) {
             handInFrame = true;
             break;
           }
         }
       }
 
-      // 2. Detect Text
+      // 2. Detect Text (ID)
+      String? detectedId;
+      bool idFoundInText = false;
+      
       final recognizedText = await _textRecognizer.processImage(inputImage);
       final text = recognizedText.text.toUpperCase();
       
-      // Look for ID patterns (e.g., "NATIONAL ID" or "IDENTITY CARD")
-      final hasIdKeywords = text.contains('NATIONAL ID') || text.contains('IDENTITY');
+      final hasIdKeywords = text.contains('NATIONAL ID') || 
+                           text.contains('IDENTITY') || 
+                           text.contains('REPUBLIC OF') ||
+                           text.contains('CARD');
       
-      // Look for 8-9 digit sequences
       final idNumberMatch = RegExp(r'\b\d{8,9}\b').firstMatch(text);
-      final hasIdNumber = idNumberMatch != null;
+      if (idNumberMatch != null) {
+        idFoundInText = true;
+        detectedId = idNumberMatch.group(0);
+      }
 
       if (mounted) {
         setState(() {
           _handDetected = handInFrame;
-          if (!handInFrame) {
-            _message = 'Please hold your ID with your hand';
-          } else if (hasIdKeywords && hasIdNumber) {
-            _message = 'ID Detected! Processing...';
-            _finalizeVerification(idNumberMatch!.group(0)!);
+          
+          if (!_hasIdBeenDetected) {
+            if (idFoundInText && hasIdKeywords) {
+              _hasIdBeenDetected = true;
+              _idNumber = detectedId!;
+              _message = 'ID Detected! Now hold it with your hand';
+              
+              // TIMEOUT FALLBACK: If hand detection fails for 4 seconds after ID is found,
+              // assume the user is holding it and proceed.
+              Future.delayed(const Duration(seconds: 4), () {
+                if (mounted && _hasIdBeenDetected && !_handDetected) {
+                  _finalizeVerification(_idNumber);
+                }
+              });
+            } else {
+              _message = 'Align your ID within the frame';
+            }
           } else {
-            _message = 'Scan your National ID card';
+            // ID already detected, now looking for hand
+            if (handInFrame) {
+              _message = 'Hand detected';
+              Future.delayed(const Duration(milliseconds: 800), () {
+                if (mounted) _finalizeVerification(_idNumber);
+              });
+            } else {
+              _message = 'ID Detected! Now hold it with your hand';
+            }
           }
         });
       }
@@ -152,7 +186,7 @@ class _ScannerViewState extends State<ScannerView> {
           // Overlay mask
           ColorFiltered(
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.5),
+              Colors.black.withValues(alpha: 0.5),
               BlendMode.srcOut,
             ),
             child: Stack(
@@ -166,8 +200,8 @@ class _ScannerViewState extends State<ScannerView> {
                 Align(
                   alignment: Alignment.center,
                   child: Container(
-                    height: 250,
-                    width: 350,
+                    height: 300,
+                    width: 400,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
@@ -182,25 +216,32 @@ class _ScannerViewState extends State<ScannerView> {
             bottom: 80,
             left: 0,
             right: 0,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _handDetected ? Colors.green.withOpacity(0.8) : Colors.red.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(20),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: (_hasIdBeenDetected && _handDetected) 
+                          ? Colors.green.withValues(alpha: 0.8) 
+                          : (_hasIdBeenDetected ? Colors.blue.withValues(alpha: 0.8) : Colors.red.withValues(alpha: 0.8)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  child: Text(
-                    _message,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 40),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 32),
                   ),
-                ),
-                const SizedBox(height: 40),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

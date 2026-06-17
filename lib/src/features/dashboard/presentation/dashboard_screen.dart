@@ -91,7 +91,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (state is DashboardLoaded) {
             return Stack(
               children: [
-                if (isDark) _buildAuroraGlows(),
+                if (isDark) _buildAuroraGlows(isDark),
                 SafeArea(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: AppSizes.p20),

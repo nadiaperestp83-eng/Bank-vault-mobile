@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:social_share_plus/social_share_plus.dart';
+import 'package:social_share_plus/social_share.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
@@ -56,7 +56,17 @@ class _BusinessProfileSectionState extends ConsumerState<BusinessProfileSection>
       final imagePath = await File('${directory.path}/business_qr.png').create();
       await imagePath.writeAsBytes(pngBytes);
 
-      await SocialSharePlus.shareToSocialMedia('My Business QR Code', path: imagePath.path);
+      SharePlugin.share(
+        ShareParamsBean(
+          platform: SharePlatforms.native,
+          contentType: LaShareContentTypes.image,
+          text: 'My Business QR Code',
+          imageFilePath: imagePath.path,
+        ),
+        (platformId) {},
+        () {},
+        (code, msg) {},
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -9,6 +9,7 @@ import 'package:vault_os/src/services/auth_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vault_os/src/utils/theme_provider.dart';
+import 'package:vault_os/src/constants/app_colors.dart';
 
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:vault_os/src/features/dashboard/presentation/bloc/dashboard_event.dart';
@@ -84,53 +85,56 @@ class VaultOSApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
 
-    return SecureGate(
-      blur: 20,
-      opacity: 0.6,
-      lockedBuilder: (context, secureNotifier) => Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primary,
-                AppColors.primary.withOpacity(0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return MaterialApp.router(
+      title: 'Vault OS',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return SecureGate(
+          blurr: 20,
+          opacity: 0.6,
+          lockedBuilder: (context, secureNotifier) => Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withValues(alpha: 0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline, size: 80, color: Colors.white),
+                    SizedBox(height: 24),
+                    Text(
+                      'Vault OS is Secured',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Your financial data is protected',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.lock_outline, size: 80, color: Colors.white),
-                SizedBox(height: 24),
-                Text(
-                  'Vault OS is Secured',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Your financial data is protected',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      child: MaterialApp.router(
-        title: 'Vault OS',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
-        routerConfig: router,
-        debugShowCheckedModeBanner: false,
-      ),
+          child: child!,
+        );
+      },
     );
   }
 }

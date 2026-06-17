@@ -11,6 +11,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vault_os/src/common_widgets/glass_card.dart';
 import 'package:flutter/services.dart';
+import 'package:vault_os/src/services/transaction_service.dart';
+import 'package:vault_os/src/services/auth_service.dart';
 import 'payment_details_screen.dart';
 
 import 'package:qr_flutter/qr_flutter.dart';

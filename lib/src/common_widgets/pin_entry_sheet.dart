@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../constants/app_sizes.dart';
 import '../constants/app_colors.dart';
+import '../services/biometric_service.dart';
 
 class PinEntrySheet extends StatefulWidget {
   final Function(String) onConfirm;
@@ -15,6 +16,39 @@ class PinEntrySheet extends StatefulWidget {
 
 class _PinEntrySheetState extends State<PinEntrySheet> {
   String _pin = '';
+  bool _isBiometricAvailable = false;
+  final BiometricService _biometricService = BiometricService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final available = await _biometricService.isBiometricAvailable();
+    if (mounted) {
+      setState(() {
+        _isBiometricAvailable = available;
+      });
+    }
+  }
+
+  Future<void> _onBiometricTap() async {
+    HapticFeedback.mediumImpact();
+    final authenticated = await _biometricService.authenticate(
+      reason: 'Confirm biometrics to authorize transaction',
+    );
+    if (authenticated && mounted) {
+      // In a real app, we might need the actual PIN for some operations,
+      // but often biometrics can bypass the need for the literal PIN string
+      // if the backend/secure storage supports it. 
+      // For this UI component, we'll signal success with a special indicator or 
+      // handle it as 'validated'.
+      widget.onConfirm('BIOMETRIC_VALIDATED');
+      Navigator.pop(context);
+    }
+  }
 
   void _onKeyTap(String key) {
     if (_pin.length < 6) {
@@ -129,12 +163,31 @@ class _PinEntrySheetState extends State<PinEntrySheet> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const SizedBox(width: 80),
+            _isBiometricAvailable 
+              ? _buildBiometricKey(primaryTextColor) 
+              : const SizedBox(width: 80),
             _buildKey('0', primaryTextColor),
             _buildBackspaceKey(primaryTextColor),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildBiometricKey(Color primaryTextColor) {
+    return InkWell(
+      onTap: _onBiometricTap,
+      borderRadius: BorderRadius.circular(40),
+      child: Container(
+        width: 80,
+        height: 80,
+        alignment: Alignment.center,
+        child: const Icon(
+          LucideIcons.fingerprint, 
+          color: AppColors.primary,
+          size: 32,
+        ),
+      ),
     );
   }
 

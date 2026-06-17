@@ -19,7 +19,7 @@ class FinanceHubScreen extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
-          if (isDark) _buildAuroraGlows(),
+          if (isDark) _buildAuroraGlows(isDark),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSizes.p24),
