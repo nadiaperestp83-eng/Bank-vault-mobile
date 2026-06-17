@@ -23,6 +23,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   final BarcodeScanner _barcodeScanner = BarcodeScanner();
   bool _isScanning = false;
   bool _hasDetected = false;
+  bool _showFlash = false;
 
   @override
   void initState() {
@@ -70,15 +71,17 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       
       if (barcodes.isNotEmpty && !_hasDetected) {
         final rawValue = barcodes.first.rawValue;
+        debugPrint('QR Scanned: $rawValue');
+
         if (rawValue != null) {
           if (rawValue.startsWith('vault_user:')) {
             _hasDetected = true;
-            HapticFeedback.heavyImpact();
+            _triggerScanFeedback();
             final userId = rawValue.replaceFirst('vault_user:', '');
             _onResultDetected({'type': 'id', 'value': userId});
           } else if (rawValue.contains('vault.os/pay/')) {
             _hasDetected = true;
-            HapticFeedback.heavyImpact();
+            _triggerScanFeedback();
             final tag = rawValue.split('/pay/').last;
             _onResultDetected({'type': 'tag', 'value': '@$tag'});
           }
@@ -91,9 +94,21 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _isScanning = false;
   }
 
+  void _triggerScanFeedback() {
+    HapticFeedback.heavyImpact();
+    setState(() => _showFlash = true);
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) setState(() => _showFlash = false);
+    });
+  }
+
   void _onResultDetected(Map<String, String> result) async {
     if (mounted) {
-      Navigator.pop(context, result);
+      // Small delay to let the user see the flash
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (mounted) {
+        Navigator.pop(context, result);
+      }
     }
   }
 
@@ -115,11 +130,16 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       body: Stack(
         children: [
           CameraPreview(_controller!),
+          
+          // Flash Effect
+          if (_showFlash)
+            Container(color: Colors.white.withValues(alpha: 0.5)),
+
           // Scanner Overlay
           Container(
             decoration: ShapeDecoration(
               shape: QrScannerOverlayShape(
-                borderColor: AppColors.primary,
+                borderColor: _hasDetected ? Colors.green : AppColors.primary,
                 borderRadius: 20,
                 borderLength: 30,
                 borderWidth: 10,
