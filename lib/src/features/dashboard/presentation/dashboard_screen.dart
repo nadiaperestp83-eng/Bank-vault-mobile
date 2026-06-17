@@ -826,8 +826,11 @@ class _RecentActivitySectionState extends State<_RecentActivitySection> with Sin
     HapticFeedback.lightImpact();
 
     try {
+      // Clear data by emitting a temporary state or just resetting the transactions locally if needed
+      // But since we use BLoC, we should tell the BLoC to reload which usually emits loading
       context.read<DashboardBloc>().add(LoadDashboardData());
-      // Wait a bit for the animation to feel meaningful
+      
+      // Wait for the animation and for the data to actually start loading
       await Future.delayed(const Duration(milliseconds: 1000));
     } finally {
       if (mounted) {
@@ -842,7 +845,7 @@ class _RecentActivitySectionState extends State<_RecentActivitySection> with Sin
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final transactions = widget.transactions;
+    final transactions = _isRefreshing ? [] : widget.transactions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -869,7 +872,10 @@ class _RecentActivitySectionState extends State<_RecentActivitySection> with Sin
         ),
         const SizedBox(height: 16),
         if (transactions.isEmpty)
-          const GlassCard(child: Center(child: Text('No recent transactions.')))
+          const GlassCard(child: Padding(
+            padding: EdgeInsets.all(AppSizes.p24),
+            child: Center(child: Text('No recent transactions.')),
+          ))
         else
           ListView.separated(
             shrinkWrap: true,
@@ -881,11 +887,18 @@ class _RecentActivitySectionState extends State<_RecentActivitySection> with Sin
               final currentUserId = Supabase.instance.client.auth.currentUser?.id;
               final isPositive = tx.type == 'deposit' || tx.receiverId == currentUserId;
               
+              // Determine other party's profile for the icon
+              final otherProfile = tx.senderId == currentUserId ? tx.receiverProfile : tx.senderProfile;
+              
               return GlassCard(
                 padding: const EdgeInsets.all(AppSizes.p12),
                 child: Row(
                   children: [
-                    LogoMapper.getLogo(tx.method, tx.description ?? tx.type),
+                    LogoMapper.getLogo(
+                      tx.method, 
+                      tx.description ?? tx.type,
+                      profilePhotoUrl: otherProfile?.profilePhotoUrl,
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(

@@ -275,26 +275,17 @@ class _TransactScreenState extends State<TransactScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                GestureDetector(
-                  onTap: () => context.go('/transact/p2p'),
-                  child: _buildProviderCard(LucideIcons.user, 'Vault User', true, isDark, surfaceColor, borderColor),
-                ),
+                _buildProviderCard(LucideIcons.user, 'Vault', true, isDark, surfaceColor, borderColor, () => context.go('/transact/p2p')),
                 const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    context.go('/transact/withdraw');
-                  },
-                  child: _buildProviderCard(LucideIcons.landmark, 'Bank', false, isDark, surfaceColor, borderColor),
-                ),
+                _buildProviderCard(LucideIcons.landmark, 'Bank', false, isDark, surfaceColor, borderColor, () {
+                  HapticFeedback.selectionClick();
+                  context.go('/transact/withdraw');
+                }),
                 const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    context.go('/transact/withdraw');
-                  },
-                  child: _buildProviderCard(LucideIcons.smartphone, 'Mobile Money', false, isDark, surfaceColor, borderColor),
-                ),
+                _buildProviderCard(LucideIcons.smartphone, 'Mobile', false, isDark, surfaceColor, borderColor, () {
+                  HapticFeedback.selectionClick();
+                  context.go('/transact/withdraw');
+                }),
               ],
             ),
             const SizedBox(height: 32),
@@ -364,25 +355,43 @@ class _TransactScreenState extends State<TransactScreen> {
     ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildProviderCard(IconData icon, String label, bool isSelected, bool isDark, Color surfaceColor, Color borderColor) {
+  Widget _buildProviderCard(IconData icon, String label, bool isSelected, bool isDark, Color surfaceColor, Color borderColor, VoidCallback onTap) {
     return Expanded(
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color: surfaceColor,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : borderColor,
-            width: isSelected ? 2 : 1,
+          child: Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : surfaceColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : borderColor,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon, 
+                  color: isSelected ? AppColors.primary : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight), 
+                  size: 24
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  label, 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected ? AppColors.primary : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                  )
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: isSelected ? AppColors.primary : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight), size: 24),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-          ],
         ),
       ),
     );
