@@ -16,13 +16,12 @@ import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/utils/logo_mapper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/dashboard_service.dart';
-import '../../../services/transaction_service.dart';
 import 'p2p/qr_scanner_screen.dart';
 import '../bloc/transaction_bloc.dart';
 import '../bloc/transaction_event.dart';
 import '../bloc/transaction_state.dart';
 import '../../../models/vault_models.dart';
-
+import '../../../models/bill_split_model.dart';
 import '../../../services/biometric_service.dart';
 import '../../../services/storage_service.dart';
 
@@ -35,11 +34,23 @@ class TransactScreen extends StatefulWidget {
 }
 
 class _TransactScreenState extends State<TransactScreen> {
-  int _activeTab = 0; // 0: Send, 1: Deposit, 2: Withdraw
+  int _activeTab = 0; // 0: Send, 1: Deposit, 2: Withdraw, 3: Split
   String _selectedCurrency = 'KES';
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _recipientController = TextEditingController();
+  
+  // Bill Split State
+  final TextEditingController _splitTitleController = TextEditingController();
+  final TextEditingController _splitAmountController = TextEditingController();
+  final TextEditingController _splitSearchController = TextEditingController();
+  List<VaultUser> _selectedParticipants = [];
+  String _splitMethod = 'equal'; // 'equal' or 'custom'
+  bool _includeCreator = true;
+  Map<String, double> _customAmounts = {};
+  String _selectedCategory = 'Food';
+  final List<String> _categories = ['Food', 'Transport', 'Rent', 'Shopping', 'Entertainment', 'Utilities', 'Travel', 'General'];
+
   VaultUser? _selectedRecipient;
   final DashboardService _dashboardService = DashboardService();
   final BiometricService _biometricService = BiometricService();
@@ -62,6 +73,9 @@ class _TransactScreenState extends State<TransactScreen> {
     _amountController.dispose();
     _phoneController.dispose();
     _recipientController.dispose();
+    _splitTitleController.dispose();
+    _splitAmountController.dispose();
+    _splitSearchController.dispose();
     _walletSubscription?.cancel();
     super.dispose();
   }
@@ -225,7 +239,6 @@ class _TransactScreenState extends State<TransactScreen> {
           _recipientController.clear();
           setState(() => _selectedRecipient = null);
           
-          // Navigate to home after a brief delay to let the snackbar be seen
           Future.delayed(const Duration(milliseconds: 1500), () {
             if (mounted) context.go('/');
           });
@@ -289,6 +302,7 @@ class _TransactScreenState extends State<TransactScreen> {
             _toggleItem(0, 'Send', isDark),
             _toggleItem(1, 'Deposit', isDark),
             _toggleItem(2, 'Withdraw', isDark),
+            _toggleItem(3, 'Split', isDark),
           ],
         ),
       ),
@@ -304,7 +318,7 @@ class _TransactScreenState extends State<TransactScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isActive ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
@@ -314,7 +328,7 @@ class _TransactScreenState extends State<TransactScreen> {
           style: TextStyle(
             color: isActive ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
             fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 12,
           ),
         ),
       ),
@@ -329,9 +343,644 @@ class _TransactScreenState extends State<TransactScreen> {
         return _buildDepositSection(isDark, surfaceColor, borderColor);
       case 2:
         return _buildWithdrawSection(isDark, surfaceColor, borderColor);
+      case 3:
+        return _buildSplitSection(isDark, surfaceColor, borderColor);
       default:
         return const SizedBox();
     }
+  }
+
+  // --- SPLIT SECTION ---
+  Widget _buildSplitSection(bool isDark, Color surfaceColor, Color borderColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCreateSplitButton(isDark, surfaceColor, borderColor),
+        const SizedBox(height: 32),
+        const Text('Owed to Me', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        _buildOwedToMeList(isDark, surfaceColor, borderColor),
+        const SizedBox(height: 32),
+        const Text('What I Owe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        _buildWhatIOweList(isDark, surfaceColor, borderColor),
+      ],
+    ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildCreateSplitButton(bool isDark, Color surfaceColor, Color borderColor) {
+    return GestureDetector(
+      onTap: () => _showCreateSplitDialog(isDark, surfaceColor, borderColor),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            Icon(LucideIcons.users, color: Colors.white, size: 28),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Create New Bill Split', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Divide expenses with friends instantly', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOwedToMeList(bool isDark, Color surfaceColor, Color borderColor) {
+    return StreamBuilder<List<BillSplit>>(
+      stream: context.read<TransactionBloc>().transactionService.getOwedToMeStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final splits = snapshot.data ?? [];
+        if (splits.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('Nobody owes you money yet', style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 12)),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: splits.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final split = splits[index];
+            final paidCount = split.members.where((m) => m.status == 'paid').length;
+            final totalCount = split.members.length;
+            final progress = totalCount > 0 ? paidCount / totalCount : 0.0;
+
+            return GlassCard(
+              padding: const EdgeInsets.all(16),
+              borderRadius: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(split.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text(CurrencyFormatter.format(split.totalAmount, 'KES'), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(LucideIcons.tag, size: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                      const SizedBox(width: 4),
+                      Text(split.category, style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                      const Spacer(),
+                      Text('$paidCount/$totalCount paid', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
+                    borderRadius: BorderRadius.circular(4),
+                    minHeight: 6,
+                  ),
+                  if (paidCount == 0) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          context.read<TransactionBloc>().add(CancelBillSplit(splitId: split.id));
+                        },
+                        style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                        child: const Text('Cancel Split', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildWhatIOweList(bool isDark, Color surfaceColor, Color borderColor) {
+    return StreamBuilder<List<BillSplitMember>>(
+      stream: context.read<TransactionBloc>().transactionService.getWhatIOweStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final members = snapshot.data ?? [];
+        if (members.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('You are all caught up!', style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight, fontSize: 12)),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: members.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final member = members[index];
+            return FutureBuilder<BillSplit?>(
+              future: _fetchSplitDetails(member.splitId),
+              builder: (context, splitSnapshot) {
+                final split = splitSnapshot.data;
+                if (split == null) return const SizedBox();
+
+                return GlassCard(
+                  padding: const EdgeInsets.all(16),
+                  borderRadius: 20,
+                  child: Row(
+                    children: [
+                      _buildCreatorAvatar(split.creatorProfile),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(split.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text('From ${split.creatorProfile?.firstName ?? 'Friend'}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(CurrencyFormatter.format(member.amount, 'KES'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () => _paySplitShare(member),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                              minimumSize: const Size(60, 32),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: const Text('Pay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<BillSplit?> _fetchSplitDetails(String splitId) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('bill_splits')
+          .select('*, creator:profiles(*)')
+          .eq('id', splitId)
+          .single();
+      return BillSplit.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Widget _buildCreatorAvatar(VaultUser? creator) {
+    if (creator == null) return const CircleAvatar(radius: 20, child: Icon(LucideIcons.user));
+    final initials = (creator.firstName?[0] ?? '') + (creator.lastName?[0] ?? '');
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      backgroundImage: creator.profilePhotoUrl != null ? NetworkImage(creator.profilePhotoUrl!) : null,
+      child: creator.profilePhotoUrl == null ? Text(initials, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)) : null,
+    );
+  }
+
+  void _paySplitShare(BillSplitMember member) {
+    _showPinSheet((pin) {
+      context.read<TransactionBloc>().add(PayBillSplit(memberId: member.id, pin: pin));
+    });
+  }
+
+  // --- CREATE SPLIT DIALOG ---
+  void _showCreateSplitDialog(bool isDark, Color surfaceColor, Color borderColor) {
+    setState(() {
+      _splitTitleController.clear();
+      _splitAmountController.clear();
+      _selectedParticipants = [];
+      _splitMethod = 'equal';
+      _includeCreator = true;
+      _customAmounts = {};
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkBackground : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: EdgeInsets.only(
+            top: 24,
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('New Bill Split', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(LucideIcons.x)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _splitTitleController,
+                  decoration: InputDecoration(
+                    labelText: 'What is this for?',
+                    hintText: 'e.g. Dinner at Mama Rocks',
+                    prefixIcon: const Icon(LucideIcons.edit3),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _splitAmountController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) => setModalState(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Total Amount',
+                    prefixIcon: const Icon(LucideIcons.banknote),
+                    suffixText: 'KES',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = _categories[index];
+                      final isSel = _selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(cat),
+                          selected: isSel,
+                          onSelected: (v) => setModalState(() => _selectedCategory = cat),
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87), fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add Participants', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('${_selectedParticipants.length} added', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildUserSearch(isDark, borderColor, setModalState),
+                const SizedBox(height: 16),
+                _buildParticipantChips(setModalState),
+                const SizedBox(height: 32),
+                _buildSplitMethodToggle(isDark, surfaceColor, borderColor, setModalState),
+                const SizedBox(height: 24),
+                CheckboxListTile(
+                  value: _includeCreator,
+                  onChanged: (v) => setModalState(() => _includeCreator = v ?? true),
+                  title: const Text('Include myself in the split', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.primary,
+                ),
+                const SizedBox(height: 24),
+                _buildSplitBreakdown(isDark, setModalState),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: _canCreateSplit() ? () => _handleCreateSplit() : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Create Split', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserSearch(bool isDark, Color borderColor, StateSetter setModalState) {
+    return Column(
+      children: [
+        TextField(
+          controller: _splitSearchController,
+          onChanged: (v) => setModalState(() {}),
+          decoration: InputDecoration(
+            hintText: 'Search friends by @tag',
+            prefixIcon: const Icon(LucideIcons.search, size: 18),
+            filled: true,
+            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        if (_splitSearchController.text.isNotEmpty)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor),
+            ),
+            child: FutureBuilder<List<VaultUser>>(
+              future: context.read<TransactionBloc>().transactionService.searchUsers(_splitSearchController.text),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('No users found', style: TextStyle(fontSize: 12)),
+                  );
+                }
+                final results = snapshot.data!;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final user = results[index];
+                    final isSelected = _selectedParticipants.any((u) => u.id == user.id);
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundImage: user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) : null,
+                        child: user.profilePhotoUrl == null ? Text(user.firstName?[0] ?? '?', style: const TextStyle(fontSize: 10)) : null,
+                      ),
+                      title: Text(user.kycTag ?? user.firstName ?? 'User', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: Text(user.firstName ?? '', style: const TextStyle(fontSize: 11)),
+                      trailing: Icon(
+                        isSelected ? LucideIcons.checkCircle2 : LucideIcons.plusCircle,
+                        color: isSelected ? AppColors.success : AppColors.primary,
+                        size: 20,
+                      ),
+                      onTap: () {
+                        setModalState(() {
+                          if (isSelected) {
+                            _selectedParticipants.removeWhere((u) => u.id == user.id);
+                          } else {
+                            _selectedParticipants.add(user);
+                          }
+                          _splitSearchController.clear();
+                        });
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildParticipantChips(StateSetter setModalState) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _selectedParticipants.map((user) => Chip(
+        label: Text(user.kycTag ?? user.firstName ?? 'User', style: const TextStyle(fontSize: 12)),
+        onDeleted: () => setModalState(() => _selectedParticipants.removeWhere((u) => u.id == user.id)),
+        deleteIcon: const Icon(LucideIcons.x, size: 14),
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        side: BorderSide.none,
+      )).toList(),
+    );
+  }
+
+  Widget _buildSplitMethodToggle(bool isDark, Color surfaceColor, Color borderColor, StateSetter setModalState) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _methodToggleItem('Equal', _splitMethod == 'equal', () => setModalState(() => _splitMethod = 'equal')),
+          ),
+          Expanded(
+            child: _methodToggleItem('Custom', _splitMethod == 'custom', () => setModalState(() => _splitMethod = 'custom')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _methodToggleItem(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54),
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSplitBreakdown(bool isDark, StateSetter setModalState) {
+    final total = double.tryParse(_splitAmountController.text) ?? 0.0;
+    if (total <= 0) return const SizedBox();
+
+    final count = _selectedParticipants.length + (_includeCreator ? 1 : 0);
+    if (count == 0) return const SizedBox();
+
+    if (_splitMethod == 'equal') {
+      final share = total / count;
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.info, color: AppColors.success, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Each person will pay ${CurrencyFormatter.format(share, 'KES')}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.success),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_includeCreator) _buildCustomInput('You', (v) => _customAmounts['creator'] = v, setModalState),
+          ..._selectedParticipants.map((u) => _buildCustomInput(u.kycTag ?? u.firstName ?? 'User', (v) => _customAmounts[u.id] = v, setModalState)),
+          const SizedBox(height: 12),
+          _buildTotalCheck(total),
+        ],
+      );
+    }
+  }
+
+  Widget _buildCustomInput(String name, Function(double) onChanged, StateSetter setModalState) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(child: Text(name, style: const TextStyle(fontSize: 14))),
+          SizedBox(
+            width: 120,
+            child: TextField(
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.right,
+              onChanged: (v) {
+                onChanged(double.tryParse(v) ?? 0.0);
+                setModalState(() {});
+              },
+              decoration: const InputDecoration(
+                suffixText: ' KES',
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalCheck(double total) {
+    double currentSum = 0;
+    _customAmounts.forEach((key, value) => currentSum += value);
+    final diff = total - currentSum;
+    final isMatch = diff.abs() < 0.01;
+
+    return Text(
+      isMatch ? 'Total matches!' : (diff > 0 ? 'Remaining: ${diff.toStringAsFixed(2)} KES' : 'Over: ${diff.abs().toStringAsFixed(2)} KES'),
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: isMatch ? AppColors.success : AppColors.error,
+      ),
+    );
+  }
+
+  bool _canCreateSplit() {
+    final title = _splitTitleController.text;
+    final total = double.tryParse(_splitAmountController.text) ?? 0.0;
+    if (title.isEmpty || total <= 0 || _selectedParticipants.isEmpty) return false;
+
+    if (_splitMethod == 'equal') return true;
+
+    double currentSum = 0;
+    _customAmounts.forEach((key, value) => currentSum += value);
+    return (total - currentSum).abs() < 0.01;
+  }
+
+  void _handleCreateSplit() {
+    final title = _splitTitleController.text;
+    final total = double.tryParse(_splitAmountController.text) ?? 0.0;
+    final count = _selectedParticipants.length + (_includeCreator ? 1 : 0);
+    
+    List<Map<String, dynamic>> members = [];
+    double creatorAmount = 0;
+
+    if (_splitMethod == 'equal') {
+      final share = total / count;
+      for (var u in _selectedParticipants) {
+        members.add({'user_id': u.id, 'amount': share});
+      }
+      creatorAmount = share;
+    } else {
+      for (var u in _selectedParticipants) {
+        members.add({'user_id': u.id, 'amount': _customAmounts[u.id] ?? 0.0});
+      }
+      creatorAmount = _customAmounts['creator'] ?? 0.0;
+    }
+
+    Navigator.pop(context);
+    _showPinSheet((pin) {
+      context.read<TransactionBloc>().add(CreateBillSplit(
+        title: title,
+        totalAmount: total,
+        category: _selectedCategory,
+        members: members,
+        creatorAmount: creatorAmount,
+        pin: pin,
+      ));
+    });
   }
 
   // --- SEND SECTION ---
@@ -342,7 +991,6 @@ class _TransactScreenState extends State<TransactScreen> {
         if (state is RecipientsLoaded) {
           recipients = List.from(state.searchResults.isNotEmpty ? state.searchResults : state.frequent);
           
-          // Ensure _selectedRecipient is in the list if it exists
           if (_selectedRecipient != null) {
             final exists = recipients.any((r) => r.id == _selectedRecipient!.id);
             if (!exists) {
@@ -448,40 +1096,37 @@ class _TransactScreenState extends State<TransactScreen> {
 
   Widget _buildProviderCard(IconData icon, String label, bool isSelected, bool isDark, Color surfaceColor, Color borderColor, VoidCallback onTap) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
+      child: Container(
+        height: 90,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(24),
-          child: Container(
-            height: 90,
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : surfaceColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isSelected ? AppColors.primary : borderColor,
-                width: isSelected ? 2 : 1,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon, 
+                color: isSelected ? AppColors.primary : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight), 
+                size: 24
               ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon, 
-                  color: isSelected ? AppColors.primary : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight), 
-                  size: 24
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  label, 
-                  style: TextStyle(
-                    fontSize: 12, 
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    color: isSelected ? AppColors.primary : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                  )
-                ),
-              ],
-            ),
+              const SizedBox(height: 10),
+              Text(
+                label, 
+                style: TextStyle(
+                  fontSize: 12, 
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? AppColors.primary : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                )
+              ),
+            ],
           ),
         ),
       ),

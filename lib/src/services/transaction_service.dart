@@ -8,6 +8,8 @@ import '../models/vault_models.dart';
 import 'transaction_cache.dart';
 import 'kyc_service.dart';
 
+import '../models/bill_split_model.dart';
+
 class KycRequiredException implements Exception {
   final String message;
   KycRequiredException(this.message);
@@ -19,6 +21,118 @@ class TransactionService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransactionCache _cache = TransactionCache();
   final KycService _kycService = KycService();
+
+  Future<void> createBillSplit({
+    required String title,
+    required double totalAmount,
+    required String category,
+    required List<Map<String, dynamic>> members,
+    required double creatorAmount,
+  }) async {
+    await _checkKyc();
+    await _supabase.rpc('create_bill_split_v3', params: {
+      'p_title': title,
+      'p_total_amount': totalAmount,
+      'p_category': category,
+      'p_members': members,
+      'p_creator_amount': creatorAmount,
+    });
+  }
+
+  Future<void> payBillSplit(String memberId) async {
+    await _checkKyc();
+    await _supabase.rpc('pay_bill_split', params: {
+      'p_member_id': memberId,
+    });
+  }
+
+  Future<void> cancelBillSplit(String splitId) async {
+    await _supabase.rpc('cancel_bill_split', params: {
+      'p_split_id': splitId,
+    });
+  }
+
+  Stream<List<BillSplit>> getOwedToMeStream() {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return Stream.value([]);
+
+    return _supabase
+        .from('bill_splits')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .asyncMap((data) async {
+          final splits = data
+              .where((json) => json['creator_id'] == userId)
+              .map((json) => BillSplit.fromJson(json))
+              .toList();
+          return await _attachSplitMembers(splits);
+        });
+  }
+
+  Stream<List<BillSplitMember>> getWhatIOweStream() {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return Stream.value([]);
+
+    return _supabase
+        .from('bill_split_members')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .asyncMap((data) async {
+          final members = data
+              .where((json) => json['user_id'] == userId && json['status'] == 'pending')
+              .map((json) => BillSplitMember.fromJson(json))
+              .toList();
+          return await _attachSplitDetails(members);
+        });
+  }
+
+  Future<List<BillSplit>> _attachSplitMembers(List<BillSplit> splits) async {
+    if (splits.isEmpty) return splits;
+    final splitIds = splits.map((s) => s.id).toList();
+
+    final membersResponse = await _supabase
+        .from('bill_split_members')
+        .select('*, user:profiles(*)')
+        .inFilter('split_id', splitIds);
+
+    final members = (membersResponse as List)
+        .map((json) => BillSplitMember.fromJson(json))
+        .toList();
+
+    return splits.map((split) {
+      final splitMembers = members.where((m) => m.splitId == split.id).toList();
+      return BillSplit(
+        id: split.id,
+        creatorId: split.creatorId,
+        title: split.title,
+        totalAmount: split.totalAmount,
+        category: split.category,
+        status: split.status,
+        createdAt: split.createdAt,
+        members: splitMembers,
+      );
+    }).toList();
+  }
+
+  Future<List<BillSplitMember>> _attachSplitDetails(List<BillSplitMember> members) async {
+    if (members.isEmpty) return members;
+    final splitIds = members.map((m) => m.splitId).toList();
+
+    final splitsResponse = await _supabase
+        .from('bill_splits')
+        .select('*, creator:profiles(*)')
+        .inFilter('id', splitIds);
+
+    final splitsMap = {
+      for (var s in (splitsResponse as List)) s['id']: BillSplit.fromJson(s)
+    };
+
+    return members.map((member) {
+      final split = splitsMap[member.splitId];
+      // Note: member object doesn't have splitDetails field yet, but we could add it or handle it in UI
+      return member;
+    }).toList();
+  }
 
   Future<void> _checkKyc() async {
     final isVerified = await _kycService.isUserVerified();

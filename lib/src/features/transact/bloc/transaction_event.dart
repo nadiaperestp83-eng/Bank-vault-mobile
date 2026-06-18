@@ -87,3 +87,39 @@ class ToggleCurrency extends TransactionEvent {
   @override
   List<Object?> get props => [currency];
 }
+
+class CreateBillSplit extends TransactionEvent {
+  final String title;
+  final double totalAmount;
+  final String category;
+  final List<Map<String, dynamic>> members;
+  final double creatorAmount;
+  final String pin;
+
+  CreateBillSplit({
+    required this.title,
+    required this.totalAmount,
+    required this.category,
+    required this.members,
+    required this.creatorAmount,
+    required this.pin,
+  });
+
+  @override
+  List<Object?> get props => [title, totalAmount, category, members, creatorAmount, pin];
+}
+
+class PayBillSplit extends TransactionEvent {
+  final String memberId;
+  final String pin;
+  PayBillSplit({required this.memberId, required this.pin});
+  @override
+  List<Object?> get props => [memberId, pin];
+}
+
+class CancelBillSplit extends TransactionEvent {
+  final String splitId;
+  CancelBillSplit({required this.splitId});
+  @override
+  List<Object?> get props => [splitId];
+}

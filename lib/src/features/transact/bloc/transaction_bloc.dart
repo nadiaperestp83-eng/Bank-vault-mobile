@@ -20,8 +20,72 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     on<PerformWithdrawal>(_onPerformWithdrawal);
     on<TransactionStatusUpdated>(_onTransactionStatusUpdated);
     on<TransactionTimeoutOccurred>(_onTransactionTimeoutOccurred);
+    on<CreateBillSplit>(_onCreateBillSplit);
+    on<PayBillSplit>(_onPayBillSplit);
+    on<CancelBillSplit>(_onCancelBillSplit);
 
     _initRealtimeSubscription();
+  }
+
+  Future<void> _onCreateBillSplit(
+      CreateBillSplit event, Emitter<TransactionState> emit) async {
+    emit(TransactionInProgress('Verifying PIN...'));
+    try {
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
+      }
+
+      emit(TransactionInProgress('Creating bill split...'));
+      await transactionService.createBillSplit(
+        title: event.title,
+        totalAmount: event.totalAmount,
+        category: event.category,
+        members: event.members,
+        creatorAmount: event.creatorAmount,
+      );
+      emit(TransactionSuccess('Bill split created successfully!'));
+    } on KycRequiredException {
+      emit(KycRequiredState());
+    } catch (e) {
+      emit(TransactionError(e.toString()));
+    }
+  }
+
+  Future<void> _onPayBillSplit(
+      PayBillSplit event, Emitter<TransactionState> emit) async {
+    emit(TransactionInProgress('Verifying PIN...'));
+    try {
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
+      }
+
+      emit(TransactionInProgress('Processing payment...'));
+      await transactionService.payBillSplit(event.memberId);
+      emit(TransactionSuccess('Payment settled successfully!'));
+    } on KycRequiredException {
+      emit(KycRequiredState());
+    } catch (e) {
+      emit(TransactionError(e.toString()));
+    }
+  }
+
+  Future<void> _onCancelBillSplit(
+      CancelBillSplit event, Emitter<TransactionState> emit) async {
+    emit(TransactionInProgress('Cancelling split...'));
+    try {
+      await transactionService.cancelBillSplit(event.splitId);
+      emit(TransactionSuccess('Bill split cancelled.'));
+    } catch (e) {
+      emit(TransactionError(e.toString()));
+    }
   }
 
   String? _currentTransactionId;
