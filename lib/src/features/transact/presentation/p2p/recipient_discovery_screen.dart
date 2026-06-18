@@ -42,12 +42,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   }
 
   void _onRecipientSelected(VaultUser user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentDetailsScreen(recipient: user),
-      ),
-    );
+    context.go('/transact', extra: user);
   }
 
   void _openScanner() async {
@@ -62,7 +57,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   }
 
   void _handleScanResult(Map<String, String> result) async {
-    final txService = context.read<TransactionService>();
+    final txService = context.read<TransactionBloc>().transactionService;
     try {
       VaultUser? user;
       if (result['type'] == 'id') {
@@ -72,25 +67,8 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
       }
 
       if (user != null && mounted) {
-        // First, update search to show the user
-        context.read<TransactionBloc>().add(SearchRecipients(user.kycTag ?? ''));
-        
-        setState(() => _scannedUserId = user!.id);
         HapticFeedback.heavyImpact();
-        
-        // Brief delay to show highlight
-        await Future.delayed(const Duration(milliseconds: 1000));
-        
-        if (mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PaymentDetailsScreen(recipient: user!),
-            ),
-          );
-          // Clear highlight when returning
-          setState(() => _scannedUserId = null);
-        }
+        context.go('/transact', extra: user);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),
@@ -104,7 +82,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   }
 
   void _showMyQR() async {
-    final txService = context.read<TransactionService>();
+    final txService = context.read<TransactionBloc>().transactionService;
     final profile = await txService.getCurrentUserProfile();
     
     if (profile == null || profile.kycTag == null) {

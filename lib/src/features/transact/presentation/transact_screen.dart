@@ -14,14 +14,16 @@ import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/utils/logo_mapper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:vault_os/src/services/dashboard_service.dart';
+import '../../../services/dashboard_service.dart';
+import '../../../services/transaction_service.dart';
+import 'p2p/qr_scanner_screen.dart';
 import '../bloc/transaction_bloc.dart';
 import '../bloc/transaction_event.dart';
 import '../bloc/transaction_state.dart';
 import '../../../models/vault_models.dart';
 
-import 'package:vault_os/src/services/biometric_service.dart';
-import 'package:vault_os/src/services/storage_service.dart';
+import '../../../services/biometric_service.dart';
+import '../../../services/storage_service.dart';
 
 class TransactScreen extends StatefulWidget {
   final VaultUser? initialRecipient;
@@ -137,6 +139,47 @@ class _TransactScreenState extends State<TransactScreen> {
         ));
       }
     });
+  }
+
+  void _openScanner() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => QrScannerScreen()),
+    );
+
+    if (result != null && result is Map<String, String>) {
+      _handleScanResult(result);
+    }
+  }
+
+  void _handleScanResult(Map<String, String> result) async {
+    final txService = context.read<TransactionBloc>().transactionService;
+    try {
+      VaultUser? user;
+      if (result['type'] == 'id') {
+        user = await txService.getUserById(result['value']!);
+      } else if (result['type'] == 'tag') {
+        user = await txService.getUserByTag(result['value']!);
+      }
+
+      if (user != null && mounted) {
+        HapticFeedback.heavyImpact();
+        setState(() {
+          _selectedRecipient = user;
+          _activeTab = 0; // Ensure we are on Send tab
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -272,7 +315,15 @@ class _TransactScreenState extends State<TransactScreen> {
       builder: (context, state) {
         List<VaultUser> recipients = [];
         if (state is RecipientsLoaded) {
-          recipients = state.searchResults.isNotEmpty ? state.searchResults : state.frequent;
+          recipients = List.from(state.searchResults.isNotEmpty ? state.searchResults : state.frequent);
+          
+          // Ensure _selectedRecipient is in the list if it exists
+          if (_selectedRecipient != null) {
+            final exists = recipients.any((r) => r.id == _selectedRecipient!.id);
+            if (!exists) {
+              recipients.insert(0, _selectedRecipient!);
+            }
+          }
         }
 
         return Column(
@@ -317,6 +368,10 @@ class _TransactScreenState extends State<TransactScreen> {
               decoration: InputDecoration(
                 hintText: 'Search by @username or name',
                 prefixIcon: const Icon(LucideIcons.search, size: 20),
+                suffixIcon: IconButton(
+                  icon: const Icon(LucideIcons.scan, size: 20, color: AppColors.primary),
+                  onPressed: _openScanner,
+                ),
                 filled: true,
                 fillColor: surfaceColor,
                 border: OutlineInputBorder(
@@ -331,7 +386,7 @@ class _TransactScreenState extends State<TransactScreen> {
             ),
             const SizedBox(height: 24),
             SizedBox(
-              height: 90,
+              height: 100,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: recipients.length + 1,
@@ -339,8 +394,12 @@ class _TransactScreenState extends State<TransactScreen> {
                   if (index == 0) return _buildContactAvatar('Add', null, null, isDark, isAdd: true);
                   final user = recipients[index - 1];
                   final isSelected = _selectedRecipient?.id == user.id;
+                  
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedRecipient = user),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedRecipient = user);
+                    },
                     child: _buildContactAvatar(
                       user.firstName ?? user.kycTag ?? 'User',
                       (user.firstName?[0] ?? '') + (user.lastName?[0] ?? ''),

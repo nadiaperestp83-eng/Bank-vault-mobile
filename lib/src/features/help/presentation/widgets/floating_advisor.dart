@@ -10,11 +10,13 @@ import 'package:vault_os/src/services/transaction_service.dart';
 import 'package:vault_os/src/models/vault_models.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:vault_os/src/features/transact/bloc/transaction_bloc.dart';
+
 class FloatingAdvisor extends StatelessWidget {
   const FloatingAdvisor({super.key});
 
   void _handleScanResult(BuildContext context, Map<String, String> result) async {
-    final txService = context.read<TransactionService>();
+    final txService = context.read<TransactionBloc>().transactionService;
     try {
       VaultUser? user;
       if (result['type'] == 'id') {
@@ -24,12 +26,7 @@ class FloatingAdvisor extends StatelessWidget {
       }
 
       if (user != null && context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaymentDetailsScreen(recipient: user!),
-          ),
-        );
+        context.go('/transact', extra: user);
       } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),

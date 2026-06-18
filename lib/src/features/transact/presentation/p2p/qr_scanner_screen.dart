@@ -80,9 +80,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           if (rawValue.startsWith('vault_user:')) {
             final userId = rawValue.replaceFirst('vault_user:', '');
             _onResultDetected({'type': 'id', 'value': userId});
-          } else if (rawValue.contains('vault.os/pay/')) {
-            final tag = rawValue.split('/pay/').last;
-            _onResultDetected({'type': 'tag', 'value': '@$tag'});
+          } else if (rawValue.contains('/pay/')) {
+            // Handle both vault.os/pay/ and localhost:8080/pay/ or any URL with /pay/
+            String tag = rawValue.split('/pay/').last;
+            // Decode URL encoding (e.g., %40 -> @)
+            tag = Uri.decodeComponent(tag);
+            // Ensure tag starts with @
+            if (!tag.startsWith('@')) tag = '@$tag';
+            _onResultDetected({'type': 'tag', 'value': tag});
           } else {
             // Support generic QR codes (e.g. for Vault Advisor)
             _onResultDetected({'type': 'raw', 'value': rawValue});
