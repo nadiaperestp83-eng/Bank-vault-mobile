@@ -75,6 +75,36 @@ class AuthService {
         .maybeSingle();
     return response?['pin_hash'] != null;
   }
+
+  Future<bool> verifyCurrentPin(String hashedPin) async {
+    final response = await _supabase.rpc(
+      'verify_current_pin',
+      params: {'provided_pin_hash': hashedPin},
+    );
+    return response == true;
+  }
+
+  Future<void> triggerPinResetOtp(String email) async {
+    await _supabase.auth.resetPasswordForEmail(email.trim());
+  }
+
+  Future<AuthResponse> verifyPinResetOtp(String email, String token) async {
+    return await _supabase.auth.verifyOTP(
+      email: email.trim(),
+      token: token.trim(),
+      type: OtpType.recovery,
+    );
+  }
+
+  Future<void> updatePin(String userId, String hashedPin) async {
+    await _supabase
+        .from('profiles')
+        .update({
+          'pin_hash': hashedPin,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', userId);
+  }
   
   User? get currentUser => _supabase.auth.currentUser;
   

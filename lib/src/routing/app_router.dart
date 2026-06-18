@@ -19,6 +19,7 @@ import 'package:vault_os/src/features/auth/presentation/login_screen.dart';
 import 'package:vault_os/src/features/auth/presentation/signup_screen.dart';
 import 'package:vault_os/src/features/help/presentation/ai_advisor_screen.dart';
 import 'package:vault_os/src/features/help/presentation/widgets/floating_advisor.dart';
+import 'package:vault_os/src/features/auth/presentation/change_pin/change_pin_screen.dart';
 import 'package:vault_os/src/models/vault_models.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -211,6 +212,12 @@ final router = GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+          routes: [
+            GoRoute(
+              path: 'change-pin',
+              builder: (context, state) => const ChangePinScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/help',

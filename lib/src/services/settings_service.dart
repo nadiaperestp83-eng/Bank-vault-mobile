@@ -5,6 +5,7 @@ import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/merchant_model.dart';
 import 'package:vault_os/src/models/device_model.dart';
 import 'package:vault_os/src/services/supabase_service.dart';
+import 'package:vault_os/src/utils/security_utils.dart';
 
 class SettingsService {
   final SupabaseClient _supabase = SupabaseService.client;
@@ -114,19 +115,18 @@ class SettingsService {
   }
 
   Future<void> updatePin(String userId, String newPin) async {
-    final hashedPin = SupabaseService.hashPin(newPin);
+    final hashedPin = SecurityUtils.hashPin(newPin);
     await _supabase.from('profiles').update({
       'pin_hash': hashedPin,
     }).eq('id', userId);
   }
 
   Future<bool> verifyCurrentPin(String userId, String pin) async {
-    final hashedPin = SupabaseService.hashPin(pin);
+    final hashedPin = SecurityUtils.hashPin(pin);
     final response = await _supabase.rpc('verify_current_pin', params: {
-      'p_user_id': userId,
-      'p_pin_hash': hashedPin,
+      'provided_pin_hash': hashedPin,
     });
-    return response as bool;
+    return response == true;
   }
 
   // --- Merchant Mode ---

@@ -9,6 +9,8 @@ import 'package:vault_os/src/models/device_model.dart';
 import 'package:vault_os/src/models/preferences_model.dart';
 import 'package:vault_os/src/models/profile_model.dart';
 
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vault_os/src/services/storage_service.dart';
 import 'package:vault_os/src/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -231,177 +233,12 @@ class SecurityCenterSection extends ConsumerWidget {
         title: const Text('Change Security PIN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: const Text('Secure multi-step update', style: TextStyle(fontSize: 12)),
         trailing: const Icon(LucideIcons.chevronRight, size: 18),
-        onTap: () => _showChangePINDialog(context),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          context.push('/settings/change-pin');
+        },
       ),
     );
   }
-
-  void _showChangePINDialog(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) => const PINChangeWorkflow(),
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-            CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          ),
-          child: FadeTransition(opacity: anim1, child: child),
-        );
-      },
-    );
-  }
 }
 
-class PINChangeWorkflow extends ConsumerStatefulWidget {
-  const PINChangeWorkflow({super.key});
-
-  @override
-  ConsumerState<PINChangeWorkflow> createState() => _PINChangeWorkflowState();
-}
-
-class _PINChangeWorkflowState extends ConsumerState<PINChangeWorkflow> {
-  int _step = 1;
-  final _currentPinController = TextEditingController();
-  final _newPinController = TextEditingController();
-  final _confirmPinController = TextEditingController();
-  final _otpController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _currentPinController.dispose();
-    _newPinController.dispose();
-    _confirmPinController.dispose();
-    _otpController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleStep() async {
-    final settingsService = ref.read(settingsServiceProvider);
-    final profile = ref.read(profileStreamProvider).value;
-    if (profile == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (_step == 1) {
-        final isValid = await settingsService.verifyCurrentPin(profile.id, _currentPinController.text);
-        if (!isValid) throw 'Invalid current PIN';
-        
-        final email = ref.read(authServiceProvider).currentUser?.email;
-        if (email == null) throw 'User email not found';
-        await settingsService.requestPinResetOtp(email);
-        
-        setState(() => _step = 2);
-      } else if (_step == 2) {
-        if (_newPinController.text != _confirmPinController.text) throw 'PINs do not match';
-        if (_newPinController.text.length != 6) throw 'PIN must be 6 digits';
-
-        final email = ref.read(authServiceProvider).currentUser?.email;
-        if (email == null) throw 'User email not found';
-        
-        await settingsService.verifyPinResetOtp(email, _otpController.text);
-        await settingsService.updatePin(profile.id, _newPinController.text);
-        
-        // Save to secure storage for biometrics
-        await StorageService().saveCredentials(email, _newPinController.text);
-        
-        if (mounted) Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return AlertDialog(
-      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.p24)),
-      title: Text(_step == 1 ? 'Verify Identity' : 'Change PIN'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_step == 1) ...[
-              const Text('Enter your current 6-digit PIN to begin.'),
-              const SizedBox(height: AppSizes.p24),
-              _buildPinInput(controller: _currentPinController, label: 'Current PIN'),
-            ] else ...[
-              const Text('Enter your new PIN and the OTP sent to your email.'),
-              const SizedBox(height: AppSizes.p24),
-              _buildPinInput(controller: _newPinController, label: 'New PIN'),
-              const SizedBox(height: AppSizes.p12),
-              _buildPinInput(controller: _confirmPinController, label: 'Confirm New PIN'),
-              const SizedBox(height: AppSizes.p12),
-              _buildPinInput(controller: _otpController, label: '6-digit OTP'),
-            ],
-            const SizedBox(height: AppSizes.p24),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _handleStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.p12)),
-                  ),
-                  child: Text(_step == 2 ? 'Update PIN' : 'Continue'),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPinInput({required TextEditingController controller, String? label}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSizes.p4),
-        ],
-        TextField(
-          controller: controller,
-          obscureText: true,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-          decoration: InputDecoration(
-            counterText: '',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.p12),
-              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.p12),
-              borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
-            ),
-            filled: true,
-            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
-            hintText: '••••••',
-            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
-          ),
-        ),
-      ],
-    );
-  }
-}
