@@ -18,6 +18,11 @@ import 'payment_details_screen.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'qr_scanner_screen.dart';
 
+import 'package:vault_os/src/common_widgets/amount_entry_dialog.dart';
+import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
+
+import 'package:vault_os/src/common_widgets/kyc_verification_dialog.dart';
+
 class RecipientDiscoveryScreen extends StatefulWidget {
   const RecipientDiscoveryScreen({super.key});
 
@@ -42,7 +47,49 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   }
 
   void _onRecipientSelected(VaultUser user) {
-    context.go('/transact', extra: user);
+    HapticFeedback.selectionClick();
+    _showQuickTransfer(user);
+  }
+
+  void _showQuickTransfer(VaultUser user) async {
+    final txService = context.read<TransactionBloc>().transactionService;
+    // Check KYC status first
+    final profile = await txService.getCurrentUserProfile();
+    if (profile == null || profile.kycStatus != 'verified') {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => const KycVerificationDialog(),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AmountEntryDialog(
+        recipient: user,
+        onConfirm: (amount, currency) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => PinEntrySheet(
+              onConfirm: (pin) {
+                context.read<TransactionBloc>().add(PerformVaultTransfer(
+                  recipientTag: user.kycTag!,
+                  amount: amount,
+                  currency: currency,
+                  pin: pin,
+                ));
+              },
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _openScanner() async {
@@ -59,6 +106,18 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
   void _handleScanResult(Map<String, String> result) async {
     final txService = context.read<TransactionBloc>().transactionService;
     try {
+      // Check KYC status first
+      final profile = await txService.getCurrentUserProfile();
+      if (profile == null || profile.kycStatus != 'verified') {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => const KycVerificationDialog(),
+          );
+        }
+        return;
+      }
+
       VaultUser? user;
       if (result['type'] == 'id') {
         user = await txService.getUserById(result['value']!);
@@ -68,7 +127,7 @@ class _RecipientDiscoveryScreenState extends State<RecipientDiscoveryScreen> {
 
       if (user != null && mounted) {
         HapticFeedback.heavyImpact();
-        context.go('/transact', extra: user);
+        _showQuickTransfer(user!);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),

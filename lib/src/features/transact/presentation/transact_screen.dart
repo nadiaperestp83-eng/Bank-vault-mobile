@@ -10,7 +10,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vault_os/src/constants/app_colors.dart';
 import 'package:vault_os/src/constants/app_sizes.dart';
-import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
+import '../../../common_widgets/amount_entry_dialog.dart';
+import '../../../common_widgets/pin_entry_sheet.dart';
 import 'package:vault_os/src/utils/currency_formatter.dart';
 import 'package:vault_os/src/utils/logo_mapper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -155,6 +156,18 @@ class _TransactScreenState extends State<TransactScreen> {
   void _handleScanResult(Map<String, String> result) async {
     final txService = context.read<TransactionBloc>().transactionService;
     try {
+      // Check KYC status first
+      final profile = await txService.getCurrentUserProfile();
+      if (profile == null || profile.kycStatus != 'verified') {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => const KycVerificationDialog(),
+          );
+        }
+        return;
+      }
+
       VaultUser? user;
       if (result['type'] == 'id') {
         user = await txService.getUserById(result['value']!);
@@ -164,10 +177,22 @@ class _TransactScreenState extends State<TransactScreen> {
 
       if (user != null && mounted) {
         HapticFeedback.heavyImpact();
-        setState(() {
-          _selectedRecipient = user;
-          _activeTab = 0; // Ensure we are on Send tab
-        });
+        showDialog(
+          context: context,
+          builder: (context) => AmountEntryDialog(
+            recipient: user!,
+            onConfirm: (amount, currency) {
+              setState(() {
+                _selectedRecipient = user;
+                _activeTab = 0;
+                _amountController.text = amount.toString();
+                _selectedCurrency = currency;
+              });
+              // Automatically trigger transaction
+              _handleTransaction();
+            },
+          ),
+        );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),

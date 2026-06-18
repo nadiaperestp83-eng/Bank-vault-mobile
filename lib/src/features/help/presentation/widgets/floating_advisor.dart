@@ -10,7 +10,14 @@ import 'package:vault_os/src/services/transaction_service.dart';
 import 'package:vault_os/src/models/vault_models.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:flutter/services.dart';
+import 'package:vault_os/src/features/transact/bloc/transaction_event.dart';
 import 'package:vault_os/src/features/transact/bloc/transaction_bloc.dart';
+
+import 'package:vault_os/src/common_widgets/amount_entry_dialog.dart';
+import 'package:vault_os/src/common_widgets/pin_entry_sheet.dart';
+
+import 'package:vault_os/src/common_widgets/kyc_verification_dialog.dart';
 
 class FloatingAdvisor extends StatelessWidget {
   const FloatingAdvisor({super.key});
@@ -18,6 +25,18 @@ class FloatingAdvisor extends StatelessWidget {
   void _handleScanResult(BuildContext context, Map<String, String> result) async {
     final txService = context.read<TransactionBloc>().transactionService;
     try {
+      // Check KYC status first
+      final profile = await txService.getCurrentUserProfile();
+      if (profile == null || profile.kycStatus != 'verified') {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => const KycVerificationDialog(),
+          );
+        }
+        return;
+      }
+
       VaultUser? user;
       if (result['type'] == 'id') {
         user = await txService.getUserById(result['value']!);
@@ -26,7 +45,37 @@ class FloatingAdvisor extends StatelessWidget {
       }
 
       if (user != null && context.mounted) {
-        context.go('/transact', extra: user);
+        HapticFeedback.heavyImpact();
+        
+        // 1. Show Amount Dialog
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AmountEntryDialog(
+            recipient: user!,
+            onConfirm: (amount, currency) {
+              // 2. Show PIN Sheet
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (sheetContext) => PinEntrySheet(
+                  onConfirm: (pin) {
+                    // 3. Dispatch Transfer Event
+                    context.read<TransactionBloc>().add(PerformVaultTransfer(
+                      recipientTag: user!.kycTag!,
+                      amount: amount,
+                      currency: currency,
+                      pin: pin,
+                    ));
+                    
+                    // Navigate to transaction screen to see progress or just show success
+                    // For quick flow, we might stay here or navigate to dashboard
+                  },
+                ),
+              );
+            },
+          ),
+        );
       } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not found')),
