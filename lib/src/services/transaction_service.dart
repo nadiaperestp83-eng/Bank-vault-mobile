@@ -342,6 +342,41 @@ class TransactionService {
     });
   }
 
+  /// Cria uma cobrança PIX via Rivoopay e registra a transação pendente,
+  /// seguindo exatamente o mesmo padrão de [initiateMpesaDeposit]: a Edge
+  /// Function cria a cobrança, guardamos o id dela em `description` e o
+  /// realtime (_initRealtimeSubscription no TransactionBloc) detecta quando
+  /// o `rivoopay-callback` marcar a entrada como 'completed'.
+  Future<Map<String, dynamic>> initiatePixDeposit({
+    required double amount,
+  }) async {
+    await _checkKyc();
+    debugPrint('DEBUG: Service calling rivoopay-create-charge for amount: $amount');
+
+    final response = await _supabase.functions.invoke('rivoopay-create-charge', body: {
+      // Rivoopay trabalha em centavos.
+      'amount': (amount * 100).round(),
+    });
+
+    debugPrint('DEBUG: rivoopay-create-charge response status: ${response.status}');
+
+    final data = response.data as Map<String, dynamic>?;
+    final chargeId = data?['id'] as String?;
+
+    if (chargeId == null) {
+      throw Exception(data?['error'] ?? 'Não foi possível gerar a cobrança PIX.');
+    }
+
+    await createPendingTransaction(
+      type: 'deposit',
+      amount: amount,
+      description: chargeId,
+      method: 'pix',
+    );
+
+    return data!;
+  }
+
   Future<String?> initiateMpesaDeposit({
     required String phoneNumber,
     required double walletCredit,
