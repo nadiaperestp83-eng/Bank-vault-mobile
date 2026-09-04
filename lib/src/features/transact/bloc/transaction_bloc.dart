@@ -17,6 +17,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     on<SearchRecipients>(_onSearchRecipients);
     on<PerformVaultTransfer>(_onPerformVaultTransfer);
     on<PerformMpesaDeposit>(_onPerformMpesaDeposit);
+    on<PerformPixDeposit>(_onPerformPixDeposit);
     on<PerformWithdrawal>(_onPerformWithdrawal);
     on<TransactionStatusUpdated>(_onTransactionStatusUpdated);
     on<TransactionTimeoutOccurred>(_onTransactionTimeoutOccurred);
@@ -205,6 +206,40 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       }
       
       emit(TransactionSuccess('STK Push sent! Please enter your M-Pesa PIN on your phone.', transactionId: checkoutId));
+    } on KycRequiredException {
+      emit(KycRequiredState());
+    } catch (e) {
+      emit(TransactionError(e.toString()));
+    }
+  }
+
+  Future<void> _onPerformPixDeposit(
+      PerformPixDeposit event, Emitter<TransactionState> emit) async {
+    emit(TransactionInProgress('Verifying PIN...'));
+    try {
+      if (event.pin != 'BIOMETRIC_VALIDATED') {
+        final isPinValid = await transactionService.verifyPin(event.pin);
+        if (!isPinValid) {
+          emit(TransactionError('Invalid Transaction PIN'));
+          return;
+        }
+      }
+
+      emit(TransactionInProgress('Gerando cobrança PIX...'));
+      final charge = await transactionService
+          .initiatePixDeposit(amount: event.amount)
+          .timeout(const Duration(seconds: 30));
+
+      final chargeId = charge['id'] as String;
+      _currentTransactionId = chargeId;
+      _startTimeoutTimer();
+
+      emit(PixChargeCreated(
+        transactionId: chargeId,
+        brCode: charge['brCode'] as String,
+        brCodeBase64: charge['brCodeBase64'] as String,
+        expiresAt: DateTime.parse(charge['expiresAt'] as String),
+      ));
     } on KycRequiredException {
       emit(KycRequiredState());
     } catch (e) {
