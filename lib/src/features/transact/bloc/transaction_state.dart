@@ -46,6 +46,23 @@ class TransactionAwaitingConfirmation extends TransactionState {
   List<Object?> get props => [message, transactionId];
 }
 
+class PixChargeCreated extends TransactionState {
+  final String transactionId; // id da cobrança na Rivoopay
+  final String brCode; // copia e cola
+  final String brCodeBase64; // QR code em base64
+  final DateTime expiresAt;
+
+  PixChargeCreated({
+    required this.transactionId,
+    required this.brCode,
+    required this.brCodeBase64,
+    required this.expiresAt,
+  });
+
+  @override
+  List<Object?> get props => [transactionId, brCode, brCodeBase64, expiresAt];
+}
+
 class TransactionError extends TransactionState {
   final String message;
   TransactionError(this.message);
