@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,6 +47,10 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
   bool _isUsd = true;
   String _searchQuery = '';
   bool _isAwaitingMpesa = false;
+  bool _isAwaitingPix = false;
+  String? _pixBrCode;
+  String? _pixBrCodeBase64;
+  DateTime? _pixExpiresAt;
 
   @override
   void initState() {
@@ -122,6 +127,14 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
               kesEquivalent: kesEquivalent,
               pin: pin,
             ));
+          } else if (_selectedMethod == 'pix') {
+            // PIX é sempre em BRL: usamos o valor digitado direto, sem
+            // conversão USD/KES (essa conversão é específica da versão Kenya
+            // do app). Ajuste aqui se/quando o app for 100% BRL.
+            context.read<TransactionBloc>().add(PerformPixDeposit(
+              amount: amount,
+              pin: pin,
+            ));
           }
         },
       ),
@@ -140,17 +153,28 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         BlocListener<TransactionBloc, TransactionState>(
           listener: (context, state) async {
             if (state is TransactionSuccess) {
-              setState(() => _isProcessing = false);
-              
+              setState(() {
+                _isProcessing = false;
+                _isAwaitingPix = false; // fecha o QR quando o webhook confirma
+              });
+
               if (state.message.contains('STK Push sent')) {
                  setState(() => _isAwaitingMpesa = true);
               } else {
                 _showSuccessOverlay(state.message);
               }
+            } else if (state is PixChargeCreated) {
+              setState(() {
+                _isAwaitingPix = true;
+                _pixBrCode = state.brCode;
+                _pixBrCodeBase64 = state.brCodeBase64;
+                _pixExpiresAt = state.expiresAt;
+              });
             } else if (state is TransactionError) {
               setState(() {
                 _isProcessing = false;
                 _isAwaitingMpesa = false;
+                _isAwaitingPix = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: Colors.red),
@@ -184,6 +208,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
                   const SizedBox(height: 32),
                   if (_selectedMethod == 'mpesa') _buildMpesaField(isDark),
                   if (_selectedMethod == 'bank') _buildBankFlow(isDark, secondaryTextColor, primaryTextColor),
+                  if (_selectedMethod == 'pix') _buildPixField(secondaryTextColor),
                   const SizedBox(height: 48),
                   _buildActionButton(),
                 ],
@@ -193,6 +218,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
         ),
         if (_isProcessing) _buildProcessingOverlay(),
         if (_isAwaitingMpesa) _buildMpesaWaitingOverlay(),
+        if (_isAwaitingPix) _buildPixWaitingOverlay(),
       ],
     );
   }
@@ -292,6 +318,7 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
     final methods = [
       {'id': 'mpesa', 'label': 'Mobile', 'icon': LucideIcons.phone},
       {'id': 'bank', 'label': 'Bank', 'icon': LucideIcons.landmark},
+      {'id': 'pix', 'label': 'PIX', 'icon': LucideIcons.qrCode},
     ];
 
     return Container(
@@ -486,6 +513,85 @@ class _DepositSetupScreenState extends State<DepositSetupScreen> {
             ],
           ),
       ],
+    );
+  }
+
+  Widget _buildPixField(Color secondaryTextColor) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: const Icon(LucideIcons.qrCode, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Um QR Code PIX será gerado com o valor acima. Aponte a câmera do seu banco ou copie o código.',
+              style: TextStyle(color: secondaryTextColor, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPixWaitingOverlay() {
+    final imageBytes = _pixBrCodeBase64 != null ? base64Decode(_pixBrCodeBase64!) : null;
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.85),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (imageBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.memory(imageBytes, width: 220, height: 220),
+                  ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Aguardando pagamento PIX...',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (_pixExpiresAt != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Expira às ${_pixExpiresAt!.hour.toString().padLeft(2, '0')}:${_pixExpiresAt!.minute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: _pixBrCode == null
+                      ? null
+                      : () {
+                          Clipboard.setData(ClipboardData(text: _pixBrCode!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Código copia-e-cola copiado!')),
+                          );
+                        },
+                  icon: const Icon(LucideIcons.copy, color: Colors.white, size: 16),
+                  label: const Text('Copiar código PIX', style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
+                ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => setState(() => _isAwaitingPix = false),
+                  child: const Text('Cancelar & Fechar', style: TextStyle(color: Colors.white54)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
